@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, shallowRef, watch, onUnmounted } from 'vue'
 import { loadModule } from 'vue3-sfc-loader'
 import * as Vue from 'vue'
 
@@ -8,7 +8,7 @@ const props = defineProps<{
 }>()
 
 const error = ref('')
-const CompiledComponent = ref<any>(null)
+const CompiledComponent = shallowRef<any>(null)
 const loading = ref(false)
 
 // Track injected <style> elements to clean them up on re-compile
