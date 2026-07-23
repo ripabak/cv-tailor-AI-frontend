@@ -1,28 +1,42 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import CVPreviewIframe from '@/components/CVPreviewIframe.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
 import VersionPanel from '@/components/VersionPanel.vue'
 import NavBar from '@/components/NavBar.vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/composables/useApi'
-import type { CV, CVVersion } from '@/types'
-import type { ChatMessage } from '@/types'
+import { useChat } from '@/composables/useChat'
+import type { CV } from '@/types'
 
 const route = useRoute()
-const cvId = Number(route.params.cvId)
+const cvId = ref(Number(route.params.cvId))
+
+const { messages, isStreaming, loadHistory, send, stop, clear } = useChat(cvId)
 
 const cv = ref<CV | null>(null)
-const messages = ref<ChatMessage[]>([])
 const generatedHtml = ref('')
 const loading = ref(true)
 const error = ref('')
+
+let lastMessagesLength = 0
+
+watch(messages, () => {
+  if (messages.value.length > lastMessagesLength) {
+    lastMessagesLength = messages.value.length
+    loadCVSilent()
+  }
+}, { deep: true })
+
+watch(isStreaming, (streaming) => {
+  if (!streaming) loadCVSilent()
+})
 
 async function loadCV() {
   loading.value = true
   error.value = ''
   try {
-    cv.value = await api.get<CV>(`/cv/${cvId}`)
+    cv.value = await api.get<CV>(`/cv/${cvId.value}`)
     generatedHtml.value = cv.value.latest_html || ''
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load CV'
@@ -31,18 +45,20 @@ async function loadCV() {
   }
 }
 
-async function handleSend(prompt: string) {
-  messages.value.push({ role: 'user', content: prompt })
-  error.value = ''
+async function loadCVSilent() {
   try {
-    const res = await api.post<{ cv: CV; version: CVVersion }>(`/cv/${cvId}/generate`, { prompt })
-    generatedHtml.value = res.version.html_content
-    cv.value = res.cv
-    messages.value.push({ role: 'ai', content: 'CV updated successfully!' })
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Generation failed'
-    messages.value.push({ role: 'ai', content: `Error: ${msg}` })
+    const updated = await api.get<CV>(`/cv/${cvId.value}`)
+    if (updated.latest_html && updated.latest_html !== generatedHtml.value) {
+      generatedHtml.value = updated.latest_html
+      cv.value = updated
+    }
+  } catch {
+    // silent refresh
   }
+}
+
+function handleSend(prompt: string) {
+  send(prompt)
 }
 
 function handlePrint() {
@@ -50,7 +66,14 @@ function handlePrint() {
   iframe?.contentWindow?.print()
 }
 
-onMounted(loadCV)
+function handleRestored() {
+  loadCV()
+}
+
+onMounted(async () => {
+  await loadCV()
+  await loadHistory()
+})
 </script>
 
 <template>
@@ -67,6 +90,13 @@ onMounted(loadCV)
       <h2 class="font-semibold text-gray-800 truncate max-w-md">{{ cv?.title }}</h2>
       <div class="flex gap-2">
         <button
+          v-if="isStreaming"
+          @click="stop"
+          class="border border-red-300 text-red-600 px-3 py-1 rounded text-sm hover:bg-red-50 transition-colors"
+        >
+          Stop
+        </button>
+        <button
           @click="handlePrint"
           class="border border-gray-300 px-3 py-1 rounded text-sm hover:bg-gray-50 transition-colors"
         >
@@ -79,7 +109,12 @@ onMounted(loadCV)
     <div class="flex-1 flex overflow-hidden">
       <!-- Left: Chat -->
       <div class="w-[400px] border-r border-gray-200 flex flex-col">
-        <ChatPanel :messages="messages" @send="handleSend" />
+        <ChatPanel
+          :messages="messages"
+          :is-streaming="isStreaming"
+          @send="handleSend"
+          @clear="clear"
+        />
       </div>
       <!-- Right: Preview + Versions -->
       <div class="flex-1 flex flex-col">
@@ -87,7 +122,7 @@ onMounted(loadCV)
           <CVPreviewIframe :html="generatedHtml" />
         </div>
         <div class="h-48 border-t border-gray-200 overflow-y-auto">
-          <VersionPanel :cv-id="cvId" :current-html="generatedHtml" @restored="loadCV" />
+          <VersionPanel :cv-id="cvId" :current-html="generatedHtml" @restored="handleRestored" />
         </div>
       </div>
     </div>

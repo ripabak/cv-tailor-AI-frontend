@@ -31,18 +31,24 @@ export interface CVVersion {
   created_at: string
 }
 
-export interface CVGenerateResponse {
-  cv: CV
-  version: CVVersion
-}
-
 export interface TokenResponse {
   access_token: string
   token_type: string
   user: User
 }
 
+export interface ToolCall {
+  id: string
+  type: 'function'
+  function: {
+    name: string
+    arguments: string
+  }
+}
+
 export interface ChatMessage {
-  role: 'user' | 'ai'
-  content: string
+  role: 'user' | 'assistant' | 'tool'
+  content: string | null
+  tool_calls?: ToolCall[]
+  tool_call_id?: string
 }

@@ -26,11 +26,10 @@ async function fetchTemplates() {
 async function createCV(templateId: number) {
   generating.value = true
   try {
-    const res = await api.post<{ cv: { id: number } }>('/cv', {
+    const res = await api.post<{ id: number; latest_html: string }>('/cv', {
       template_id: templateId,
-      prompt: 'Buat CV dengan data berikut. Isi data dummy yang masuk akal untuk seorang software engineer.',
     })
-    router.push(`/editor/${res.cv.id}`)
+    router.push(`/editor/${res.id}`)
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to create CV'
   } finally {
