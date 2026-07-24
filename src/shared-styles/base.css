@@ -1,0 +1,118 @@
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
+.markdown-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.markdown-content p {
+  margin: 0.25em 0;
+}
+
+.markdown-content p:first-child {
+  margin-top: 0;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content pre {
+  overflow-x: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0.4em 0;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  border-radius: var(--radius-sm);
+  background-color: color-mix(in srgb, var(--color-primary-dark) 5%, transparent);
+}
+
+.markdown-content code {
+  border-radius: 0.25rem;
+  background-color: color-mix(in srgb, var(--color-primary-dark) 8%, transparent);
+  padding: 0.125rem 0.25rem;
+  font-size: 0.75rem;
+}
+
+.markdown-content pre code {
+  display: block;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+}
+
+.markdown-content a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 1.5em;
+  margin: 0.25em 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+  font-weight: 600;
+  margin: 0.5em 0 0.25em;
+}
+
+.markdown-content h1 { font-size: 1.25em; }
+.markdown-content h2 { font-size: 1.15em; }
+.markdown-content h3 { font-size: 1.05em; }
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+  color: var(--color-text);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}

@@ -46,9 +46,21 @@ export interface ToolCall {
   }
 }
 
+export interface ToolCallDisplay {
+  id: string
+  name: string
+  args: Record<string, unknown>
+  status: 'pending' | 'running' | 'done' | 'error'
+  output?: string
+  error?: string
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'tool'
   content: string | null
+  reasoning?: string
+  toolCalls?: ToolCallDisplay[]
+  isStreaming?: boolean
   tool_calls?: ToolCall[]
   tool_call_id?: string
 }

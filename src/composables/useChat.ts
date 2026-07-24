@@ -1,192 +1,290 @@
-import { ref, type Ref } from 'vue'
-import type { ChatMessage } from '@/types'
+import { ref, onUnmounted, type Ref } from 'vue'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+export interface StreamMessage {
+  type: string
+  content: string
+  tool_calls?: Array<{
+    id: string
+    name: string
+    args: Record<string, unknown>
+    type: string
+  }>
+  tool_call_id?: string
+  name?: string
+  status?: string
+  additional_kwargs?: Record<string, unknown>
+}
 
-function getToken(): string | null {
-  return localStorage.getItem('token')
+interface SSEEvent {
+  id?: string
+  event?: string
+  data?: Record<string, unknown>
+}
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
+function token() {
+  return localStorage.getItem('token') || ''
+}
+
+function genId(): string {
+  return crypto.randomUUID()
 }
 
 function sessionKey(cvId: number): string {
   return `chat_session_${cvId}`
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
+function parseSSE(buffer: string): { events: SSEEvent[]; rest: string } {
+  const events: SSEEvent[] = []
+  const parts = buffer.split('\n\n')
+  const rest = parts.pop() || ''
+
+  for (const block of parts) {
+    if (!block.trim() || block.startsWith(':')) continue
+
+    const msg: { id?: string; event?: string; data?: string } = {}
+    for (const line of block.split('\n')) {
+      if (line.startsWith(':')) continue
+      const ci = line.indexOf(':')
+      if (ci === -1) continue
+      const field = line.slice(0, ci)
+      const raw = line.slice(ci + 1)
+      const val = raw.startsWith(' ') ? raw.slice(1) : raw
+      if (field === 'id') msg.id = val
+      else if (field === 'event') msg.event = val
+      else if (field === 'data') msg.data = (msg.data || '') + val
+    }
+
+    if (msg.data) {
+      try { events.push({ ...msg, data: JSON.parse(msg.data) }) }
+      catch { events.push(msg as any) }
+    }
+  }
+
+  return { events, rest }
+}
+
 export function useChat(cvId: Ref<number>) {
-  const messages = ref<ChatMessage[]>([])
+  const messages = ref<StreamMessage[]>([])
   const isStreaming = ref(false)
-  const sessionId = ref<string | null>(null)
-  const abortController = ref<AbortController | null>(null)
+  const threadId = ref<string | null>(null)
+  const lastSeq = ref(0)
+  let abort: AbortController | null = null
+  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
+  let shouldReconnect = false
+  let streamActive = false
+  const msgIndex = new Map<string, number>()
 
-  function addMessage(msg: ChatMessage) {
-    messages.value.push(msg)
+  function teardown() {
+    reader?.cancel()
+    abort?.abort()
+    reader = null
+    abort = null
   }
 
-  function updateLastAssistant(content: string) {
-    const msgs = messages.value
-    const last = msgs.length > 0 ? msgs[msgs.length - 1] : null
-    if (last && last.role === 'assistant') {
-      last.content = (last.content || '') + content
-    } else {
-      msgs.push({ role: 'assistant' as const, content })
+  function lastToolMsg(toolCallId: string): StreamMessage | undefined {
+    for (let i = messages.value.length - 1; i >= 0; i--) {
+      const m = messages.value[i]!
+      if (m.type === 'tool' && m.tool_call_id === toolCallId) return m
     }
+    return undefined
   }
 
-  function handleDeltaContent(content: string) {
-    if (content.startsWith('\n📖') || content.startsWith('\n✏️') || content.startsWith('\n✅') || content.startsWith('\n⚠️') || content.startsWith('\n🔧')) {
-      addMessage({ role: 'assistant' as const, content: content.trim() })
-    } else {
-      updateLastAssistant(content)
-    }
-  }
+  async function connect(): Promise<void> {
+    const tid = threadId.value
+    if (!tid) return
 
-  async function loadHistory() {
-    const token = getToken()
-    try {
-      const res = await fetch(`${BASE_URL}/cv/${cvId.value}/messages`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) return
-      const data: { role: string; content: string | null; tool_calls?: never; tool_call_id?: string; created_at: string }[] = await res.json()
-      if (data.length === 0) return
+    abort = new AbortController()
+    const signal = abort.signal
 
-      messages.value = data.map((m) => ({
-        role: m.role as ChatMessage['role'],
-        content: m.content ?? null,
-        tool_calls: m.tool_calls as never,
-        tool_call_id: m.tool_call_id,
-      }))
+    const res = await fetch(`${API_URL}/threads/${tid}/stream`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channels: ['*'], since: lastSeq.value }),
+      signal,
+    })
 
-      const stored = localStorage.getItem(sessionKey(cvId.value))
-      if (stored) {
-        sessionId.value = stored
-      }
-    } catch {
-      // silent
-    }
-  }
+    if (!res.ok) throw new Error(`Stream HTTP ${res.status}`)
+    if (!res.body) throw new Error('No response body')
 
-  async function send(userContent: string) {
-    if (!userContent.trim() || isStreaming.value) return
+    reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buf = ''
 
-    addMessage({ role: 'user', content: userContent })
-    isStreaming.value = true
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
 
-    const controller = new AbortController()
-    abortController.value = controller
+      buf += decoder.decode(value, { stream: true })
+      const { events, rest } = parseSSE(buf)
+      buf = rest
 
-    const token = getToken()
-    const payload = {
-      messages: messages.value.map((m) => ({
-        role: m.role,
-        content: m.content,
-        ...(m.tool_calls ? { tool_calls: m.tool_calls } : {}),
-        ...(m.tool_call_id ? { tool_call_id: m.tool_call_id } : {}),
-      })),
-      session_id: sessionId.value,
-      stream: true,
-    }
+      for (const ev of events) {
+        const seq = ev.data?.seq as number | undefined
+        if (seq) lastSeq.value = seq
 
-    try {
-      const response = await fetch(`${BASE_URL}/cv/${cvId.value}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      })
+        const method = ev.data?.method as string | undefined
+        const params = ev.data?.params as Record<string, any> | undefined
+        if (!method || !params) continue
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ detail: 'Request failed' }))
-        throw new Error(err.detail || `HTTP ${response.status}`)
-      }
+        const data = params.data as Record<string, any> | undefined
+        if (!data) continue
 
-      const newSessionId = response.headers.get('X-Session-Id')
-      if (newSessionId) {
-        sessionId.value = newSessionId
-        localStorage.setItem(sessionKey(cvId.value), newSessionId)
-      }
-
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('No response body')
-
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (!line.trim() || line.startsWith(':')) continue
-          if (line === 'data: [DONE]') {
-            isStreaming.value = false
-            return
+        if (method === 'message_start') {
+          const msg: StreamMessage = { type: 'ai', content: '' }
+          messages.value.push(msg)
+          msgIndex.set(data.id, messages.value.length - 1)
+        } else if (method === 'values') {
+          const msgs = params.data?.messages as StreamMessage[] | undefined
+          if (msgs) messages.value = msgs
+        } else if (method === 'text_delta') {
+          const idx = msgIndex.get(data.id)
+          if (idx === undefined) continue
+          const msg = messages.value[idx]!
+          if (data.kind === 'reasoning') {
+            const ak = (msg.additional_kwargs ??= {}) as Record<string, unknown>
+            ak.reasoning = ((ak.reasoning as string) || '') + data.delta
+          } else {
+            msg.content += data.delta
           }
-          if (!line.startsWith('data: ')) continue
-
-          try {
-            const parsed = JSON.parse(line.slice(6))
-            const choices = parsed.choices
-            if (!choices || choices.length === 0) continue
-
-            const delta = choices[0].delta || {}
-            const finishReason = choices[0].finish_reason
-
-            if (delta.content) {
-              handleDeltaContent(delta.content as string)
-            }
-
-            if (finishReason === 'stop') {
-              isStreaming.value = false
-            }
-          } catch {
-            continue
+        } else if (method === 'tool_calls_done') {
+          const idx = msgIndex.get(data.id)
+          if (idx !== undefined && data.tool_calls) {
+            messages.value[idx]!.tool_calls = data.tool_calls
+          }
+        } else if (method === 'message_end') {
+          msgIndex.delete(data.id)
+        } else if (method === 'tool_start') {
+          messages.value.push({
+            type: 'tool',
+            content: '',
+            tool_call_id: data.tool_call_id,
+            name: data.name,
+            status: 'running',
+          })
+        } else if (method === 'tool_delta') {
+          const tm = lastToolMsg(data.tool_call_id)
+          if (tm) tm.content += data.delta
+        } else if (method === 'tool_end') {
+          const tm = lastToolMsg(data.tool_call_id)
+          if (tm) {
+            tm.content = data.output || tm.content
+            tm.status = data.error ? 'error' : 'success'
+          }
+        } else if (method === 'lifecycle') {
+          const evt = data.event as string | undefined
+          if (evt === 'running') {
+            isStreaming.value = true
+          } else if (evt === 'completed' || evt === 'failed') {
+            isStreaming.value = false
           }
         }
       }
-    } catch (e: unknown) {
-      if (e instanceof Error && e.name === 'AbortError') return
-      const msg = e instanceof Error ? e.message : 'Stream failed'
-      addMessage({ role: 'assistant', content: `Error: ${msg}` })
-    } finally {
-      isStreaming.value = false
+    }
+  }
+
+  async function initStream() {
+    if (!threadId.value) return
+    if (streamActive) return
+
+    streamActive = true
+    shouldReconnect = true
+
+    while (shouldReconnect) {
+      try {
+        teardown()
+        await connect()
+        if (shouldReconnect) await delay(1000)
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          if (shouldReconnect) await delay(500)
+          continue
+        }
+        console.error('stream error, reconnecting:', err)
+        if (shouldReconnect) await delay(2000)
+      }
+    }
+
+    streamActive = false
+  }
+
+  async function send(content: string) {
+    if (!content.trim() || isStreaming.value) return
+
+    let tid = threadId.value
+    if (!tid) {
+      tid = genId()
+      threadId.value = tid
+      localStorage.setItem(sessionKey(cvId.value), tid)
+      initStream()
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token()}`,
+    }
+
+    try {
+      const fullMessages = [
+        ...messages.value.map((m) => ({ type: m.type, content: m.content })),
+        { type: 'human' as const, content },
+      ]
+
+      const cmdRes = await fetch(`${API_URL}/threads/${tid}/commands`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          method: 'run.start',
+          params: {
+            input: { cv_id: cvId.value, messages: fullMessages },
+          },
+        }),
+      })
+
+      if (!cmdRes.ok) throw new Error(`Command HTTP ${cmdRes.status}`)
+      const cmd = await cmdRes.json()
+      if (cmd.type === 'error') throw new Error(cmd.message || 'Command failed')
+    } catch (err: any) {
+      if (err.name === 'AbortError') return
+      console.error('send error:', err)
     }
   }
 
   function stop() {
-    abortController.value?.abort()
-    isStreaming.value = false
+    reader?.cancel()
+    abort?.abort()
   }
 
-  async function clear() {
-    messages.value = []
-    sessionId.value = null
+  function clearChat() {
+    shouldReconnect = false
+    streamActive = false
+    teardown()
+    threadId.value = null
     localStorage.removeItem(sessionKey(cvId.value))
+    messages.value = []
+    lastSeq.value = 0
+    msgIndex.clear()
+  }
 
-    const token = getToken()
-    try {
-      await fetch(`${BASE_URL}/cv/${cvId.value}/chat`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
-    } catch {
-      // silent
+  async function loadHistory() {
+    const stored = localStorage.getItem(sessionKey(cvId.value))
+    if (stored) {
+      threadId.value = stored
+      lastSeq.value = 0
+      initStream()
     }
   }
 
-  return {
-    messages,
-    isStreaming,
-    sessionId,
-    loadHistory,
-    send,
-    stop,
-    clear,
-  }
+  onUnmounted(() => {
+    shouldReconnect = false
+    streamActive = false
+    teardown()
+  })
+
+  return { messages, isStreaming, threadId, loadHistory, send, stop, clear: clearChat }
 }

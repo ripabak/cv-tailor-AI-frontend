@@ -21,12 +21,12 @@ const error = ref('')
 
 let lastMessagesLength = 0
 
-watch(messages, () => {
-  if (messages.value.length > lastMessagesLength) {
-    lastMessagesLength = messages.value.length
+watch(() => messages.value.length, (len) => {
+  if (len > lastMessagesLength) {
+    lastMessagesLength = len
     loadCVSilent()
   }
-}, { deep: true })
+})
 
 watch(isStreaming, (streaming) => {
   if (!streaming) loadCVSilent()
