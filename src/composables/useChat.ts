@@ -231,9 +231,13 @@ export function useChat(cvId: Ref<number>) {
 
     try {
       const fullMessages = [
-        ...messages.value.map((m) => ({ type: m.type, content: m.content })),
+        ...messages.value
+          .filter((m) => m.type !== 'tool')
+          .map((m) => ({ type: m.type, content: m.content })),
         { type: 'human' as const, content },
       ]
+
+      messages.value.push({ type: 'human', content })
 
       const cmdRes = await fetch(`${API_URL}/threads/${tid}/commands`, {
         method: 'POST',
