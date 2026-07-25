@@ -11,9 +11,6 @@ RUN bun install --frozen-lockfile
 
 COPY . .
 
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
-
 RUN bun run build-only
 
 # =========================================
@@ -25,8 +22,10 @@ COPY nginx.conf /etc/nginx/nginx.conf
 
 COPY --chown=nginx:nginx --from=builder /app/dist /usr/share/nginx/html
 
+COPY --chmod=755 docker-entrypoint.sh /
+
 USER nginx
 
 EXPOSE 8080
 
-CMD ["nginx", "-c", "/etc/nginx/nginx.conf", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
