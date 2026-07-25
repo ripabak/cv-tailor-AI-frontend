@@ -13,6 +13,7 @@ export interface StreamMessage {
   name?: string
   status?: string
   additional_kwargs?: Record<string, unknown>
+  [key: string]: any
 }
 
 interface SSEEvent {
@@ -162,7 +163,7 @@ export function useChat(cvId: Ref<number>) {
         } else if (method === 'tool_start') {
           messages.value.push({
             type: 'tool',
-            content: '',
+            content: 'started\n',
             tool_call_id: data.tool_call_id,
             name: data.name,
             status: 'running',
@@ -170,17 +171,25 @@ export function useChat(cvId: Ref<number>) {
         } else if (method === 'tool_delta') {
           const tm = lastToolMsg(data.tool_call_id)
           if (tm) tm.content += data.delta
+        } else if (method === 'tool_progress') {
+          const tm = lastToolMsg(data.tool_call_id)
+          if (tm) tm.content += (data.message || '') + '\n'
         } else if (method === 'tool_end') {
           const tm = lastToolMsg(data.tool_call_id)
           if (tm) {
-            tm.content = data.output || tm.content
-            tm.status = data.error ? 'error' : 'success'
+            if (data.error) {
+              tm.content += 'error: ' + data.error + '\n'
+              tm.status = 'error'
+            } else {
+              tm.content += 'done\n'
+              tm.status = 'success'
+            }
           }
         } else if (method === 'lifecycle') {
           const evt = data.event as string | undefined
           if (evt === 'running') {
             isStreaming.value = true
-          } else if (evt === 'completed' || evt === 'failed') {
+          } else if (evt === 'completed' || evt === 'failed' || evt === 'cancelled') {
             isStreaming.value = false
           }
         }
@@ -259,9 +268,27 @@ export function useChat(cvId: Ref<number>) {
     }
   }
 
-  function stop() {
+  async function stop() {
+    shouldReconnect = false
+    isStreaming.value = false
     reader?.cancel()
     abort?.abort()
+
+    const tid = threadId.value
+    if (tid) {
+      try {
+        await fetch(`${API_URL}/threads/${tid}/commands`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token()}`,
+          },
+          body: JSON.stringify({ method: 'run.cancel' }),
+        })
+      } catch {
+        // ignore cancel errors
+      }
+    }
   }
 
   function clearChat() {
