@@ -22,9 +22,11 @@ COPY nginx.conf /etc/nginx/nginx.conf
 
 COPY --chown=nginx:nginx --from=builder /app/dist /usr/share/nginx/html
 
+COPY docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
+
 USER nginx
 
 EXPOSE 8080
 
-ENTRYPOINT ["nginx", "-c", "/etc/nginx/nginx.conf"]
-CMD ["-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
