@@ -11,6 +11,7 @@ import type { CV } from '@/types'
 
 const route = useRoute()
 const cvId = ref(Number(route.params.cvId))
+const mobileTab = ref<'chat' | 'preview'>('chat')
 
 const { messages, isStreaming, loadHistory, send, stop, clear } = useChat(cvId)
 
@@ -105,10 +106,31 @@ onMounted(async () => {
       </div>
     </div>
 
+    <!-- Mobile tab selector -->
+    <div class="lg:hidden flex border-b border-gray-200 bg-white">
+      <button
+        @click="mobileTab = 'chat'"
+        class="flex-1 py-2.5 text-sm font-medium text-center transition-colors"
+        :class="mobileTab === 'chat' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'"
+      >
+        Chat
+      </button>
+      <button
+        @click="mobileTab = 'preview'"
+        class="flex-1 py-2.5 text-sm font-medium text-center transition-colors"
+        :class="mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'"
+      >
+        CV Preview
+      </button>
+    </div>
+
     <!-- Split Screen -->
     <div class="flex-1 flex overflow-hidden">
       <!-- Left: Chat -->
-      <div class="w-[400px] border-r border-gray-200 flex flex-col">
+      <div
+        class="w-[400px] border-r border-gray-200 max-lg:w-full max-lg:border-r-0"
+        :class="mobileTab === 'chat' ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'"
+      >
         <ChatPanel
           :messages="messages"
           :is-streaming="isStreaming"
@@ -117,7 +139,10 @@ onMounted(async () => {
         />
       </div>
       <!-- Right: Preview + Versions -->
-      <div class="flex-1 flex flex-col">
+      <div
+        class="flex-1"
+        :class="mobileTab === 'preview' ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'"
+      >
         <div class="flex-1">
           <CVPreviewIframe :html="generatedHtml" />
         </div>
