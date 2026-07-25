@@ -1,4 +1,4 @@
-const API_URL = (window as any).__APP_CONFIG__?.API_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const API_URL = import.meta.env.VITE_API_URL || (window as any).__APP_CONFIG__?.API_URL || 'http://localhost:8000/api'
 
 function getToken(): string | null {
   return localStorage.getItem('token')

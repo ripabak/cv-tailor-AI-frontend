@@ -22,7 +22,7 @@ interface SSEEvent {
   data?: Record<string, unknown>
 }
 
-const API_URL = (window as any).__APP_CONFIG__?.API_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || (window as any).__APP_CONFIG__?.API_URL || 'http://localhost:8000'
 
 function token() {
   return localStorage.getItem('token') || ''
