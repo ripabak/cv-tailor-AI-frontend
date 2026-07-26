@@ -80,6 +80,39 @@ export function useChat(cvId: Ref<number>) {
   let shouldReconnect = false
   let streamActive = false
   const msgIndex = new Map<string, number>()
+  let streamEpoch = 0
+  let persistTimer: ReturnType<typeof setTimeout> | null = null
+
+  function persistNow() {
+    const k = sessionKey(cvId.value)
+    try {
+      localStorage.setItem(k + '_messages', JSON.stringify(messages.value))
+      localStorage.setItem(k + '_seq', String(lastSeq.value))
+    } catch { /* quota exceeded */ }
+  }
+
+  function persist() {
+    if (persistTimer) clearTimeout(persistTimer)
+    persistTimer = setTimeout(persistNow, 300)
+  }
+
+  function loadPersisted() {
+    const k = sessionKey(cvId.value)
+    const ms = localStorage.getItem(k + '_messages')
+    if (ms) {
+      try { messages.value = JSON.parse(ms) } catch {}
+      lastSeq.value = Number.MAX_SAFE_INTEGER
+    } else {
+      const sq = localStorage.getItem(k + '_seq')
+      if (sq) lastSeq.value = parseInt(sq, 10) || 0
+    }
+  }
+
+  function clearPersisted() {
+    const k = sessionKey(cvId.value)
+    localStorage.removeItem(k + '_messages')
+    localStorage.removeItem(k + '_seq')
+  }
 
   function teardown() {
     reader?.cancel()
@@ -143,6 +176,7 @@ export function useChat(cvId: Ref<number>) {
         } else if (method === 'values') {
           const msgs = params.data?.messages as StreamMessage[] | undefined
           if (msgs) messages.value = msgs
+          persist()
         } else if (method === 'text_delta') {
           const idx = msgIndex.get(data.id)
           if (idx === undefined) continue
@@ -160,6 +194,7 @@ export function useChat(cvId: Ref<number>) {
           }
         } else if (method === 'message_end') {
           msgIndex.delete(data.id)
+          persist()
         } else if (method === 'tool_start') {
           messages.value.push({
             type: 'tool',
@@ -191,6 +226,7 @@ export function useChat(cvId: Ref<number>) {
             isStreaming.value = true
           } else if (evt === 'completed' || evt === 'failed' || evt === 'cancelled') {
             isStreaming.value = false
+            persist()
           }
         }
       }
@@ -203,6 +239,7 @@ export function useChat(cvId: Ref<number>) {
 
     streamActive = true
     shouldReconnect = true
+    const epoch = ++streamEpoch
 
     while (shouldReconnect) {
       try {
@@ -219,7 +256,7 @@ export function useChat(cvId: Ref<number>) {
       }
     }
 
-    streamActive = false
+    if (epoch === streamEpoch) streamActive = false
   }
 
   async function send(content: string) {
@@ -230,8 +267,8 @@ export function useChat(cvId: Ref<number>) {
       tid = genId()
       threadId.value = tid
       localStorage.setItem(sessionKey(cvId.value), tid)
-      initStream()
     }
+    initStream()
 
     const headers = {
       'Content-Type': 'application/json',
@@ -247,6 +284,7 @@ export function useChat(cvId: Ref<number>) {
       ]
 
       messages.value.push({ type: 'human', content })
+      persistNow()
 
       const cmdRes = await fetch(`${API_URL}/threads/${tid}/commands`, {
         method: 'POST',
@@ -271,8 +309,14 @@ export function useChat(cvId: Ref<number>) {
   async function stop() {
     shouldReconnect = false
     isStreaming.value = false
+    streamActive = false
+    msgIndex.clear()
     reader?.cancel()
     abort?.abort()
+
+    const last = messages.value[messages.value.length - 1]
+    if (last?.type === 'ai') messages.value.pop()
+    persistNow()
 
     const tid = threadId.value
     if (tid) {
@@ -297,6 +341,7 @@ export function useChat(cvId: Ref<number>) {
     teardown()
     threadId.value = null
     localStorage.removeItem(sessionKey(cvId.value))
+    clearPersisted()
     messages.value = []
     lastSeq.value = 0
     msgIndex.clear()
@@ -306,7 +351,7 @@ export function useChat(cvId: Ref<number>) {
     const stored = localStorage.getItem(sessionKey(cvId.value))
     if (stored) {
       threadId.value = stored
-      lastSeq.value = 0
+      loadPersisted()
       initStream()
     }
   }
@@ -315,6 +360,7 @@ export function useChat(cvId: Ref<number>) {
     shouldReconnect = false
     streamActive = false
     teardown()
+    persistNow()
   })
 
   return { messages, isStreaming, threadId, loadHistory, send, stop, clear: clearChat }
