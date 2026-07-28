@@ -22,13 +22,6 @@ async function print() {
   win.document.write(html)
   win.document.close()
 
-  const style = win.document.createElement('style')
-  style.textContent = `
-    @page { margin: 0; }
-    body { margin: 2cm !important; }
-  `
-  win.document.head.appendChild(style)
-
   await new Promise<void>(resolve => {
     win.onload = () => resolve()
     if (win.document.readyState === 'complete') resolve()
