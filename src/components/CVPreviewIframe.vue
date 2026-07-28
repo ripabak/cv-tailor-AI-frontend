@@ -9,10 +9,41 @@ const props = withDefaults(defineProps<{
 })
 
 const iframeRef = ref<HTMLIFrameElement | null>(null)
+const containerRef = ref<HTMLDivElement | null>(null)
 
 const zoomStyle = computed(() => ({
   zoom: props.scale,
 }))
+
+function saveScroll() {
+  const container = containerRef.value
+  const containerTop = container?.scrollTop ?? 0
+
+  let iframeRatio = 0
+  const win = iframeRef.value?.contentWindow
+  if (win) {
+    const doc = win.document.documentElement
+    const sh = doc.scrollHeight
+    iframeRatio = sh > 0 ? win.scrollY / sh : 0
+  }
+
+  return { containerTop, iframeRatio }
+}
+
+function restoreScroll(state: { containerTop: number; iframeRatio: number } | undefined) {
+  if (!state) return
+
+  const container = containerRef.value
+  if (container) {
+    container.scrollTop = state.containerTop
+  }
+
+  const win = iframeRef.value?.contentWindow
+  if (win) {
+    const newHeight = win.document.documentElement.scrollHeight
+    win.scrollTo(0, newHeight * state.iframeRatio)
+  }
+}
 
 async function print() {
   if (!iframeRef.value) return
@@ -38,11 +69,11 @@ async function print() {
   win.print()
 }
 
-defineExpose({ print })
+defineExpose({ print, saveScroll, restoreScroll, iframeRef })
 </script>
 
 <template>
-  <div class="w-full h-full overflow-auto">
+  <div ref="containerRef" class="w-full h-full overflow-auto">
     <iframe
       v-if="html"
       ref="iframeRef"

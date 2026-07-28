@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue'
 import CVPreviewIframe from '@/components/CVPreviewIframe.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
 import VersionTimeline from '@/components/VersionTimeline.vue'
@@ -149,9 +149,11 @@ async function handleUndo() {
   const parent = versions.value.find(v => v.id === current.parent_version_id)
   if (!parent) return
   try {
+    pendingScrollState = savePreviewScroll()
     await api.post(`/cv/${cvId.value}/versions/${parent.id}/revert`)
     cv.value = await api.get<CV>(`/cv/${cvId.value}`)
     generatedHtml.value = parent.html_content
+    restorePreviewScroll()
     await loadVersions()
   } catch {
     // silent
@@ -163,13 +165,34 @@ async function handleRedo() {
   const child = versions.value.find(v => v.parent_version_id === cv.value!.current_version_id)
   if (!child) return
   try {
+    pendingScrollState = savePreviewScroll()
     await api.post(`/cv/${cvId.value}/versions/${child.id}/revert`)
     cv.value = await api.get<CV>(`/cv/${cvId.value}`)
     generatedHtml.value = child.html_content
+    restorePreviewScroll()
     await loadVersions()
   } catch {
     // silent
   }
+}
+
+let pendingScrollState: ReturnType<typeof savePreviewScroll> = undefined
+
+function savePreviewScroll() {
+  return previewRef.value?.saveScroll()
+}
+
+function restorePreviewScroll() {
+  const iframeEl = previewRef.value?.iframeRef
+  if (!iframeEl) return
+
+  const onLoad = () => {
+    iframeEl.removeEventListener('load', onLoad)
+    previewRef.value?.restoreScroll(pendingScrollState)
+    pendingScrollState = undefined
+  }
+
+  iframeEl.addEventListener('load', onLoad)
 }
 
 const previewRef = ref<InstanceType<typeof CVPreviewIframe> | null>(null)
