@@ -16,6 +16,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   send: [prompt: string]
   clear: []
+  stop: []
 }>()
 
 const PRESETS = [
@@ -131,6 +132,7 @@ function handleSend(text: string) {
         <ChatInput
           :disabled="isStreaming"
           @submit="handleSend"
+          @stop="emit('stop')"
         />
       </template>
     </ChatContainer>

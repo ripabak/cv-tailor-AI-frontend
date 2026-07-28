@@ -18,6 +18,7 @@ export interface CV {
   user_id: number
   template_id: number
   title: string
+  current_version_id?: number | null
   created_at: string
   updated_at: string
   latest_html?: string | null
@@ -28,6 +29,7 @@ export interface CVVersion {
   id: number
   user_cv_id: number
   html_content: string
+  parent_version_id: number | null
   created_at: string
 }
 
