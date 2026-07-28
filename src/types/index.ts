@@ -19,10 +19,18 @@ export interface CV {
   template_id: number
   title: string
   current_version_id?: number | null
+  latest_html?: string | null
   created_at: string
   updated_at: string
-  latest_html?: string | null
   template_title?: string | null
+}
+
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
 }
 
 export interface CVVersion {

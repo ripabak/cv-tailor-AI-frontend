@@ -3,18 +3,26 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/composables/useApi'
 import NavBar from '@/components/NavBar.vue'
-import type { CV } from '@/types'
+import CVPreviewCard from '@/components/CVPreviewCard.vue'
+import Pagination from '@/components/Pagination.vue'
+import type { CV, PaginatedResponse } from '@/types'
 
 const router = useRouter()
 const cvs = ref<CV[]>([])
 const loading = ref(true)
 const error = ref('')
+const page = ref(1)
+const totalPages = ref(1)
+const total = ref(0)
 
 async function fetchCVs() {
   loading.value = true
   error.value = ''
   try {
-    cvs.value = await api.get<CV[]>('/cv')
+    const res = await api.get<PaginatedResponse<CV>>(`/cv?page=${page.value}&page_size=9`)
+    cvs.value = res.items
+    total.value = res.total
+    totalPages.value = res.total_pages
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load CVs'
   } finally {
@@ -38,12 +46,17 @@ function formatDate(date: string) {
   })
 }
 
+function onPageChange(newPage: number) {
+  page.value = newPage
+  fetchCVs()
+}
+
 onMounted(fetchCVs)
 </script>
 
 <template>
   <NavBar />
-  <div class="max-w-4xl mx-auto p-6">
+  <div class="max-w-6xl mx-auto p-6">
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-gray-800">My CVs</h1>
       <router-link
@@ -62,24 +75,33 @@ onMounted(fetchCVs)
       <p>Click "Create New CV" to get started</p>
     </div>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div
-        v-for="cv in cvs"
-        :key="cv.id"
-        class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-        @click="router.push(`/editor/${cv.id}`)"
-      >
-        <h3 class="font-semibold text-gray-800 truncate">{{ cv.title }}</h3>
-        <p class="text-sm text-gray-500 mt-1">Updated {{ formatDate(cv.updated_at) }}</p>
-        <div class="flex justify-end mt-3">
-          <button
-            @click.stop="deleteCV(cv.id)"
-            class="text-xs text-red-500 hover:text-red-700"
-          >
-            Delete
-          </button>
-        </div>
+    <template v-else>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <CVPreviewCard
+          v-for="cv in cvs"
+          :key="cv.id"
+          :title="cv.title"
+          :html="cv.latest_html"
+          :subtitle="`Updated ${formatDate(cv.updated_at)}`"
+          @click="router.push(`/editor/${cv.id}`)"
+        >
+          <template #actions>
+            <button
+              @click.stop="deleteCV(cv.id)"
+              class="text-xs text-red-500 hover:text-red-700"
+            >
+              Delete
+            </button>
+          </template>
+        </CVPreviewCard>
       </div>
-    </div>
+
+      <Pagination
+        v-if="totalPages > 1"
+        :page="page"
+        :total-pages="totalPages"
+        @change="onPageChange"
+      />
+    </template>
   </div>
 </template>
