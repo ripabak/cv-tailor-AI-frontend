@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import CVPreviewIframe from '@/components/CVPreviewIframe.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
 import VersionTimeline from '@/components/VersionTimeline.vue'
@@ -174,6 +174,36 @@ async function handleRedo() {
 
 const previewRef = ref<InstanceType<typeof CVPreviewIframe> | null>(null)
 
+const zoom = ref(1)
+const ZOOM_STEP = 0.1
+const ZOOM_MIN = 0.3
+const ZOOM_MAX = 2.5
+
+function zoomIn() {
+  zoom.value = Math.min(ZOOM_MAX, +(zoom.value + ZOOM_STEP).toFixed(1))
+}
+function zoomOut() {
+  zoom.value = Math.max(ZOOM_MIN, +(zoom.value - ZOOM_STEP).toFixed(1))
+}
+function zoomReset() {
+  zoom.value = 1
+}
+
+function handleKeydown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key === '=') {
+    e.preventDefault()
+    zoomIn()
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+    e.preventDefault()
+    zoomOut()
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+    e.preventDefault()
+    zoomReset()
+  }
+}
+
 function handlePrint() {
   previewRef.value?.print()
 }
@@ -208,6 +238,11 @@ function openShare() {
 onMounted(async () => {
   await loadCV()
   await loadHistory()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -267,6 +302,36 @@ onMounted(async () => {
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
           </svg>
         </button>
+        <div class="flex items-center gap-0.5 border border-gray-300 rounded">
+          <button
+            @click="zoomOut"
+            :disabled="zoom <= ZOOM_MIN"
+            class="px-1.5 py-1 text-sm hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Zoom Out"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+          <button
+            @click="zoomReset"
+            class="px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 transition-colors min-w-[48px]"
+            title="Reset Zoom"
+          >
+            {{ Math.round(zoom * 100) }}%
+          </button>
+          <button
+            @click="zoomIn"
+            :disabled="zoom >= ZOOM_MAX"
+            class="px-1.5 py-1 text-sm hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Zoom In"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        </div>
         <button
           @click="handlePrint"
           class="border border-gray-300 px-3 py-1 rounded text-sm hover:bg-gray-50 transition-colors"
@@ -341,7 +406,7 @@ onMounted(async () => {
         :class="mobileTab === 'preview' ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'"
       >
         <div class="flex-1">
-          <CVPreviewIframe ref="previewRef" :html="generatedHtml" />
+          <CVPreviewIframe ref="previewRef" :html="generatedHtml" :scale="zoom" />
         </div>
       </div>
     </div>

@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
-defineProps<{
+const props = withDefaults(defineProps<{
   html: string
-}>()
+  scale?: number
+}>(), {
+  scale: 1,
+})
 
 const iframeRef = ref<HTMLIFrameElement | null>(null)
+
+const zoomStyle = computed(() => ({
+  zoom: props.scale,
+}))
 
 async function print() {
   if (!iframeRef.value) return
@@ -35,13 +42,15 @@ defineExpose({ print })
 </script>
 
 <template>
-  <div class="w-full h-full">
+  <div class="w-full h-full overflow-auto">
     <iframe
       v-if="html"
       ref="iframeRef"
       :srcdoc="html"
       sandbox="allow-scripts allow-same-origin allow-modals"
-      class="w-full h-full border-0"
+      :style="zoomStyle"
+      class="border-0"
+      style="width: 100%; height: 100%;"
       title="CV Preview"
     ></iframe>
     <div v-else class="w-full h-full flex items-center justify-center text-gray-400">
