@@ -11,6 +11,7 @@ import Markdown from './Markdown.vue'
 const props = defineProps<{
   messages: StreamMessage[]
   isStreaming: boolean
+  totalUsage: { input_tokens?: number; output_tokens?: number; total_tokens?: number; calls?: number }
 }>()
 
 const emit = defineEmits<{
@@ -18,6 +19,12 @@ const emit = defineEmits<{
   clear: []
   stop: []
 }>()
+
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
+  return String(n)
+}
 
 const PRESETS = [
   'Complete my CV with professional experience and skills',
@@ -35,7 +42,16 @@ function handleSend(text: string) {
   <div class="flex flex-col h-full bg-surface">
     <!-- Header (fixed) -->
     <div class="flex items-center justify-between px-4 py-2 border-b border-border bg-surface-secondary shrink-0">
-      <span class="text-xs font-medium text-text-secondary">Chat</span>
+      <div class="flex items-center gap-3">
+        <span class="text-xs font-medium text-text-secondary">Chat</span>
+        <div
+          v-if="totalUsage.total_tokens"
+          class="flex items-center gap-1 text-[10px] text-text-tertiary"
+          title="Total token usage for this chat"
+        >
+          <span class="tabular-nums">{{ formatTokens(totalUsage.total_tokens) }} tokens</span>
+        </div>
+      </div>
       <button
         @click="emit('clear')"
         class="text-xs text-text-tertiary hover:text-error transition-colors cursor-pointer"

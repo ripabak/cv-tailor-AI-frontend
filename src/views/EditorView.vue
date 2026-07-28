@@ -14,7 +14,7 @@ const route = useRoute()
 const cvId = ref(Number(route.params.cvId))
 const mobileTab = ref<'chat' | 'preview'>('chat')
 
-const { messages, isStreaming, loadHistory, send, stop, clear } = useChat(cvId)
+const { messages, isStreaming, totalUsage, loadHistory, send, stop, clear } = useChat(cvId)
 
 const cv = ref<CV | null>(null)
 const generatedHtml = ref('')
@@ -276,6 +276,7 @@ onMounted(async () => {
         <ChatPanel
           :messages="messages"
           :is-streaming="isStreaming"
+          :total-usage="totalUsage"
           @send="handleSend"
           @clear="clear"
           @stop="stop"

@@ -73,6 +73,7 @@ function parseSSE(buffer: string): { events: SSEEvent[]; rest: string } {
 export function useChat(cvId: Ref<number>) {
   const messages = ref<StreamMessage[]>([])
   const isStreaming = ref(false)
+  const totalUsage = ref<{ input_tokens?: number; output_tokens?: number; total_tokens?: number; calls?: number }>({})
   const threadId = ref<string | null>(null)
   const lastSeq = ref(0)
   let abort: AbortController | null = null
@@ -88,6 +89,7 @@ export function useChat(cvId: Ref<number>) {
     try {
       localStorage.setItem(k + '_messages', JSON.stringify(messages.value))
       localStorage.setItem(k + '_seq', String(lastSeq.value))
+      localStorage.setItem(k + '_usage', JSON.stringify(totalUsage.value))
     } catch { /* quota exceeded */ }
   }
 
@@ -106,12 +108,17 @@ export function useChat(cvId: Ref<number>) {
       const sq = localStorage.getItem(k + '_seq')
       if (sq) lastSeq.value = parseInt(sq, 10) || 0
     }
+    const us = localStorage.getItem(k + '_usage')
+    if (us) {
+      try { totalUsage.value = JSON.parse(us) } catch {}
+    }
   }
 
   function clearPersisted() {
     const k = sessionKey(cvId.value)
     localStorage.removeItem(k + '_messages')
     localStorage.removeItem(k + '_seq')
+    localStorage.removeItem(k + '_usage')
   }
 
   function teardown() {
@@ -189,6 +196,9 @@ export function useChat(cvId: Ref<number>) {
           }
         } else if (method === 'message_end') {
           msgIndex.delete(data.id)
+          if (data.total_usage) {
+            totalUsage.value = data.total_usage as typeof totalUsage.value
+          }
           persist()
         } else if (method === 'tool_start') {
           messages.value.push({
@@ -338,6 +348,7 @@ export function useChat(cvId: Ref<number>) {
     localStorage.removeItem(sessionKey(cvId.value))
     clearPersisted()
     messages.value = []
+    totalUsage.value = {}
     lastSeq.value = 0
     msgIndex.clear()
   }
@@ -358,5 +369,5 @@ export function useChat(cvId: Ref<number>) {
     persistNow()
   })
 
-  return { messages, isStreaming, threadId, loadHistory, send, stop, clear: clearChat }
+  return { messages, isStreaming, totalUsage, threadId, loadHistory, send, stop, clear: clearChat }
 }
