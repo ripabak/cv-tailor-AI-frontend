@@ -21,6 +21,36 @@ const generatedHtml = ref('')
 const loading = ref(true)
 const error = ref('')
 
+const editingTitle = ref(false)
+const titleInput = ref<HTMLInputElement | null>(null)
+const titleDraft = ref('')
+const savingTitle = ref(false)
+
+function startEditingTitle() {
+  if (!cv.value) return
+  titleDraft.value = cv.value.title
+  editingTitle.value = true
+  requestAnimationFrame(() => titleInput.value?.focus())
+}
+
+async function saveTitle() {
+  if (!cv.value || !titleDraft.value.trim()) return
+  savingTitle.value = true
+  try {
+    const updated = await api.patch<CV>(`/cv/${cvId.value}`, { title: titleDraft.value.trim() })
+    cv.value = updated
+    editingTitle.value = false
+  } catch {
+    // silent
+  } finally {
+    savingTitle.value = false
+  }
+}
+
+function cancelEditTitle() {
+  editingTitle.value = false
+}
+
 const versions = ref<CVVersion[]>([])
 const publishing = ref(false)
 const showShareModal = ref(false)
@@ -190,7 +220,28 @@ onMounted(async () => {
   <div v-else class="h-[calc(100vh-61px)] flex flex-col">
     <!-- Toolbar -->
     <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white">
-      <h2 class="font-semibold text-gray-800 truncate max-w-md">{{ cv?.title }}</h2>
+      <div class="flex-1 min-w-0 mr-4">
+        <div v-if="editingTitle" class="flex items-center gap-2">
+          <input
+            ref="titleInput"
+            v-model="titleDraft"
+            @keydown.enter="saveTitle"
+            @keydown.escape="cancelEditTitle"
+            @blur="saveTitle"
+            :disabled="savingTitle"
+            class="font-semibold text-gray-800 bg-transparent appearance-none shadow-none focus:shadow-none focus:outline-none focus:ring-0 border-0 outline-0 ring-0 px-0 py-0.5 w-full max-w-md" style="border: none; outline: none; box-shadow: none;"
+            maxlength="200"
+          />
+        </div>
+        <h2
+          v-else
+          @click="startEditingTitle"
+          class="font-semibold text-gray-800 truncate max-w-md cursor-pointer hover:text-blue-600 transition-colors"
+          title="Click to rename"
+        >
+          {{ cv?.title }}
+        </h2>
+      </div>
       <div class="flex gap-2">
         <button
           @click="handleUndo"

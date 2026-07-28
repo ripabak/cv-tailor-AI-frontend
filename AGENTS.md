@@ -74,6 +74,7 @@ const { token, user, isAuthenticated, login, register, logout, fetchUser } = use
 ```ts
 api.get<T>('/path')
 api.post<T>('/path', body)
+api.patch<T>('/path', body)
 api.delete<T>('/path')
 ```
 - Auto-injects `Authorization: Bearer <token>` header
