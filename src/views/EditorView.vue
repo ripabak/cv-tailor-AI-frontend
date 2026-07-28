@@ -125,9 +125,10 @@ function handleRedo() {
   }
 }
 
+const previewRef = ref<InstanceType<typeof CVPreviewIframe> | null>(null)
+
 function handlePrint() {
-  const iframe = document.querySelector('iframe') as HTMLIFrameElement | null
-  iframe?.contentWindow?.print()
+  previewRef.value?.print()
 }
 
 onMounted(async () => {
@@ -222,7 +223,7 @@ onMounted(async () => {
         :class="mobileTab === 'preview' ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'"
       >
         <div class="flex-1">
-          <CVPreviewIframe :html="generatedHtml" />
+          <CVPreviewIframe ref="previewRef" :html="generatedHtml" />
         </div>
       </div>
     </div>
