@@ -126,10 +126,12 @@ async function loadCV() {
 async function loadCVSilent() {
   try {
     const updated = await api.get<CV>(`/cv/${cvId.value}`)
-    if (updated.latest_html && updated.latest_html !== generatedHtml.value) {
-      generatedHtml.value = updated.latest_html
+    const htmlChanged = updated.latest_html && updated.latest_html !== generatedHtml.value
+    const titleChanged = updated.title !== cv.value?.title
+    if (htmlChanged || titleChanged) {
+      generatedHtml.value = updated.latest_html || generatedHtml.value
       cv.value = updated
-      await loadVersions()
+      if (htmlChanged) await loadVersions()
     }
   } catch {
     // silent refresh
