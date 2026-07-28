@@ -4,6 +4,7 @@ import CVPreviewIframe from '@/components/CVPreviewIframe.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
 import VersionTimeline from '@/components/VersionTimeline.vue'
 import NavBar from '@/components/NavBar.vue'
+import ShareModal from '@/components/ShareModal.vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/composables/useApi'
 import { useChat } from '@/composables/useChat'
@@ -21,10 +22,23 @@ const loading = ref(true)
 const error = ref('')
 
 const versions = ref<CVVersion[]>([])
-const versionIndex = ref(0)
+const publishing = ref(false)
+const showShareModal = ref(false)
+const publicUrl = computed(() => {
+  if (!cv.value?.public_slug) return ''
+  return `${window.location.origin}/cv/${cv.value.public_slug}`
+})
 
-const canUndo = () => versionIndex.value < activeVersions.value.length - 1
-const canRedo = () => versionIndex.value > 0
+const canUndo = computed(() => {
+  if (!cv.value?.current_version_id) return false
+  const current = versions.value.find(v => v.id === cv.value!.current_version_id)
+  return current?.parent_version_id != null
+})
+
+const canRedo = computed(() => {
+  if (!cv.value?.current_version_id) return false
+  return versions.value.some(v => v.parent_version_id === cv.value!.current_version_id)
+})
 
 function getActiveLineage(allVersions: CVVersion[], currentId: number | null | undefined): CVVersion[] {
   const versionMap = new Map<number, CVVersion>()
@@ -72,7 +86,6 @@ async function loadCV() {
     cv.value = await api.get<CV>(`/cv/${cvId.value}`)
     generatedHtml.value = cv.value.latest_html || ''
     await loadVersions()
-    versionIndex.value = 0
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load CV'
   } finally {
@@ -87,7 +100,6 @@ async function loadCVSilent() {
       generatedHtml.value = updated.latest_html
       cv.value = updated
       await loadVersions()
-      versionIndex.value = 0
     }
   } catch {
     // silent refresh
@@ -95,33 +107,36 @@ async function loadCVSilent() {
 }
 
 async function handleSend(prompt: string) {
-  if (versionIndex.value > 0) {
-    const targetVersion = activeVersions.value[versionIndex.value]
-    if (targetVersion) {
-      try {
-        await api.post(`/cv/${cvId.value}/versions/${targetVersion.id}/revert`)
-        await loadVersions()
-        versionIndex.value = 0
-        generatedHtml.value = targetVersion.html_content
-      } catch {
-        // proceed with send even if revert fails
-      }
-    }
-  }
   send(prompt)
 }
 
-function handleUndo() {
-  if (canUndo()) {
-    versionIndex.value++
-    generatedHtml.value = activeVersions.value[versionIndex.value]?.html_content ?? generatedHtml.value
+async function handleUndo() {
+  if (!canUndo.value || !cv.value?.current_version_id) return
+  const current = versions.value.find(v => v.id === cv.value!.current_version_id)
+  if (!current?.parent_version_id) return
+  const parent = versions.value.find(v => v.id === current.parent_version_id)
+  if (!parent) return
+  try {
+    await api.post(`/cv/${cvId.value}/versions/${parent.id}/revert`)
+    cv.value = await api.get<CV>(`/cv/${cvId.value}`)
+    generatedHtml.value = parent.html_content
+    await loadVersions()
+  } catch {
+    // silent
   }
 }
 
-function handleRedo() {
-  if (canRedo()) {
-    versionIndex.value--
-    generatedHtml.value = activeVersions.value[versionIndex.value]?.html_content ?? generatedHtml.value
+async function handleRedo() {
+  if (!canRedo.value || !cv.value?.current_version_id) return
+  const child = versions.value.find(v => v.parent_version_id === cv.value!.current_version_id)
+  if (!child) return
+  try {
+    await api.post(`/cv/${cvId.value}/versions/${child.id}/revert`)
+    cv.value = await api.get<CV>(`/cv/${cvId.value}`)
+    generatedHtml.value = child.html_content
+    await loadVersions()
+  } catch {
+    // silent
   }
 }
 
@@ -129,6 +144,33 @@ const previewRef = ref<InstanceType<typeof CVPreviewIframe> | null>(null)
 
 function handlePrint() {
   previewRef.value?.print()
+}
+
+async function togglePublish() {
+  if (!cv.value) return
+  publishing.value = true
+  try {
+    if (cv.value.is_published) {
+      await api.post(`/cv/${cvId.value}/unpublish`)
+      cv.value.is_published = false
+      cv.value.public_slug = null
+    } else {
+      const res = await api.post<{ slug: string; url: string }>(`/cv/${cvId.value}/publish`)
+      cv.value.is_published = true
+      cv.value.public_slug = res.slug
+      showShareModal.value = true
+    }
+  } catch {
+    // error handled silently
+  } finally {
+    publishing.value = false
+  }
+}
+
+function openShare() {
+  if (cv.value?.public_slug) {
+    showShareModal.value = true
+  }
 }
 
 onMounted(async () => {
@@ -152,7 +194,7 @@ onMounted(async () => {
       <div class="flex gap-2">
         <button
           @click="handleUndo"
-          :disabled="!canUndo()"
+          :disabled="!canUndo"
           class="border border-gray-300 px-2 py-1 rounded text-sm hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="Undo"
         >
@@ -163,7 +205,7 @@ onMounted(async () => {
         </button>
         <button
           @click="handleRedo"
-          :disabled="!canRedo()"
+          :disabled="!canRedo"
           class="border border-gray-300 px-2 py-1 rounded text-sm hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="Redo"
         >
@@ -178,11 +220,33 @@ onMounted(async () => {
         >
           Download PDF
         </button>
+        <button
+          v-if="cv?.is_published"
+          @click="openShare"
+          class="border border-gray-300 px-3 py-1 rounded text-sm hover:bg-gray-50 transition-colors"
+          title="Share link"
+        >
+          <svg class="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+            <polyline points="16 6 12 2 8 6" />
+            <line x1="12" y1="2" x2="12" y2="15" />
+          </svg>
+        </button>
+        <button
+          @click="togglePublish"
+          :disabled="publishing"
+          class="px-3 py-1 rounded text-sm font-medium transition-colors"
+          :class="cv?.is_published
+            ? 'bg-green-50 text-green-700 border border-green-300 hover:bg-green-100'
+            : 'bg-blue-600 text-white hover:bg-blue-700'"
+        >
+          {{ publishing ? '...' : cv?.is_published ? 'Unpublish' : 'Publish' }}
+        </button>
       </div>
     </div>
 
     <!-- Version Timeline -->
-    <VersionTimeline :versions="activeVersions" :current-index="versionIndex" />
+    <VersionTimeline :versions="activeVersions" :current-index="0" />
 
     <!-- Mobile tab selector -->
     <div class="lg:hidden flex border-b border-gray-200 bg-white">
@@ -227,5 +291,10 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+    <ShareModal
+      :visible="showShareModal"
+      :url="publicUrl"
+      @close="showShareModal = false"
+    />
   </div>
 </template>

@@ -38,6 +38,12 @@ const router = createRouter({
       component: () => import('@/views/EditorView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/cv/:slug',
+      name: 'public-cv',
+      component: () => import('@/views/PublicCVView.vue'),
+      meta: { requiresAuth: false },
+    },
   ],
 })
 

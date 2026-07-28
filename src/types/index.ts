@@ -20,6 +20,8 @@ export interface CV {
   title: string
   current_version_id?: number | null
   latest_html?: string | null
+  is_published: boolean
+  public_slug: string | null
   created_at: string
   updated_at: string
   template_title?: string | null
