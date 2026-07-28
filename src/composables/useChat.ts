@@ -187,11 +187,6 @@ export function useChat(cvId: Ref<number>) {
           } else {
             msg.content += data.delta
           }
-        } else if (method === 'tool_calls_done') {
-          const idx = msgIndex.get(data.id)
-          if (idx !== undefined && data.tool_calls) {
-            messages.value[idx]!.tool_calls = data.tool_calls
-          }
         } else if (method === 'message_end') {
           msgIndex.delete(data.id)
           persist()
