@@ -56,7 +56,7 @@ const publishing = ref(false)
 const showShareModal = ref(false)
 const publicUrl = computed(() => {
   if (!cv.value?.public_slug) return ''
-  return `${window.location.origin}/cv/${cv.value.public_slug}`
+  return `${window.location.origin}/view/${cv.value.public_slug}`
 })
 
 const canUndo = computed(() => {
@@ -279,8 +279,8 @@ onUnmounted(() => {
   </div>
   <div v-else class="h-[calc(100vh-61px)] flex flex-col">
     <!-- Toolbar -->
-    <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white">
-      <div class="flex-1 min-w-0 mr-4">
+    <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-white gap-3 overflow-x-auto">
+      <div class="min-w-0 flex-shrink-0">
         <div v-if="editingTitle" class="flex items-center gap-2">
           <input
             ref="titleInput"
@@ -289,24 +289,24 @@ onUnmounted(() => {
             @keydown.escape="cancelEditTitle"
             @blur="saveTitle"
             :disabled="savingTitle"
-            class="font-semibold text-gray-800 bg-transparent appearance-none shadow-none focus:shadow-none focus:outline-none focus:ring-0 border-0 outline-0 ring-0 px-0 py-0.5 w-full max-w-md" style="border: none; outline: none; box-shadow: none;"
+            class="font-semibold text-gray-800 bg-transparent appearance-none shadow-none focus:shadow-none focus:outline-none focus:ring-0 border-0 outline-0 ring-0 px-0 py-0.5 w-full max-w-[140px] sm:max-w-xs lg:max-w-md" style="border: none; outline: none; box-shadow: none;"
             maxlength="200"
           />
         </div>
         <h2
           v-else
           @click="startEditingTitle"
-          class="font-semibold text-gray-800 truncate max-w-md cursor-pointer hover:text-blue-600 transition-colors"
+          class="font-semibold text-gray-800 truncate max-w-[140px] sm:max-w-xs lg:max-w-md cursor-pointer hover:text-blue-600 transition-colors"
           title="Click to rename"
         >
           {{ cv?.title }}
         </h2>
       </div>
-      <div class="flex gap-2">
+      <div class="flex items-center gap-2 overflow-x-auto flex-shrink-0">
         <button
           @click="handleUndo"
           :disabled="!canUndo"
-          class="border border-gray-300 px-2 py-1 rounded text-sm hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          class="border border-gray-300 p-1.5 rounded text-sm hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
           title="Undo"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -317,7 +317,7 @@ onUnmounted(() => {
         <button
           @click="handleRedo"
           :disabled="!canRedo"
-          class="border border-gray-300 px-2 py-1 rounded text-sm hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          class="border border-gray-300 p-1.5 rounded text-sm hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
           title="Redo"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -325,7 +325,7 @@ onUnmounted(() => {
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
           </svg>
         </button>
-        <div class="flex items-center gap-0.5 border border-gray-300 rounded">
+        <div class="flex items-center gap-0.5 border border-gray-300 rounded flex-shrink-0">
           <button
             @click="zoomOut"
             :disabled="zoom <= ZOOM_MIN"
@@ -338,7 +338,7 @@ onUnmounted(() => {
           </button>
           <button
             @click="zoomReset"
-            class="px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 transition-colors min-w-[48px]"
+            class="px-1.5 py-1 text-xs text-gray-600 hover:bg-gray-50 transition-colors min-w-[40px] flex-shrink-0"
             title="Reset Zoom"
           >
             {{ Math.round(zoom * 100) }}%
@@ -357,17 +357,23 @@ onUnmounted(() => {
         </div>
         <button
           @click="handlePrint"
-          class="border border-gray-300 px-3 py-1 rounded text-sm hover:bg-gray-50 transition-colors"
+          class="border border-gray-300 p-1.5 rounded text-sm hover:bg-gray-50 transition-colors flex-shrink-0"
+          title="Download PDF"
         >
-          Download PDF
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span class="hidden lg:inline ml-1.5">Download PDF</span>
         </button>
         <button
           v-if="cv?.is_published"
           @click="openShare"
-          class="border border-gray-300 px-3 py-1 rounded text-sm hover:bg-gray-50 transition-colors"
+          class="border border-gray-300 p-1.5 rounded text-sm hover:bg-gray-50 transition-colors flex-shrink-0"
           title="Share link"
         >
-          <svg class="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
             <polyline points="16 6 12 2 8 6" />
             <line x1="12" y1="2" x2="12" y2="15" />
@@ -376,12 +382,22 @@ onUnmounted(() => {
         <button
           @click="togglePublish"
           :disabled="publishing"
-          class="px-3 py-1 rounded text-sm font-medium transition-colors"
+          class="p-1.5 rounded text-sm font-medium transition-colors flex-shrink-0 flex items-center gap-1"
           :class="cv?.is_published
             ? 'bg-green-50 text-green-700 border border-green-300 hover:bg-green-100'
             : 'bg-blue-600 text-white hover:bg-blue-700'"
+          :title="cv?.is_published ? 'Unpublish' : 'Publish'"
         >
-          {{ publishing ? '...' : cv?.is_published ? 'Unpublish' : 'Publish' }}
+          <svg v-if="cv?.is_published" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          <span class="hidden lg:inline">{{ publishing ? '...' : cv?.is_published ? 'Unpublish' : 'Publish' }}</span>
         </button>
       </div>
     </div>
