@@ -15,7 +15,9 @@ const scaledHtml = computed(() => {
   if (props.scale === 1) return props.html
   return props.html.replace(
     '</head>',
-    `<style>html{zoom:${props.scale}}</style>\n</head>`
+    `<style>
+      body{transform:scale(${props.scale});transform-origin:top center}
+    </style>\n</head>`
   )
 })
 
