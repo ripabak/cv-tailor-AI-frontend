@@ -56,7 +56,7 @@ const publishing = ref(false)
 const showShareModal = ref(false)
 const publicUrl = computed(() => {
   if (!cv.value?.public_slug) return ''
-  return `${window.location.origin}/view/${cv.value.public_slug}`
+  return `${window.location.origin}/cv/${cv.value.public_slug}`
 })
 
 const canUndo = computed(() => {

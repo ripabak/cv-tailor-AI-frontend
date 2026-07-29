@@ -7,8 +7,6 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const apiUrl = env.VITE_API_URL || 'http://localhost:8000/api'
-  const backendUrl = apiUrl.replace(/\/api\/?$/, '')
 
   return {
     plugins: [
@@ -19,11 +17,6 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url))
-      },
-    },
-    server: {
-      proxy: {
-        '/view': backendUrl,
       },
     },
   }
