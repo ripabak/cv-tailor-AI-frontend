@@ -5,4 +5,9 @@ window.__APP_CONFIG__ = {
 }
 EOF
 
-exec nginx -c /etc/nginx/nginx.conf -g "daemon off;"
+: "${BACKEND_URL:=backend:8000}"
+export BACKEND_URL
+
+envsubst '${BACKEND_URL}' < /etc/nginx/nginx.conf > /tmp/nginx.conf
+
+exec nginx -c /tmp/nginx.conf -g "daemon off;"
