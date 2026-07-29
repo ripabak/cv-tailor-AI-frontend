@@ -10,6 +10,8 @@ import { api } from '@/composables/useApi'
 import { useChat } from '@/composables/useChat'
 import type { CV, CVVersion } from '@/types'
 
+const BACKEND_URL = (import.meta.env.VITE_API_URL || (window as any).__APP_CONFIG__?.API_URL || 'http://localhost:8000/api').replace(/\/api\/?$/, '')
+
 const route = useRoute()
 const cvId = ref(Number(route.params.cvId))
 const mobileTab = ref<'chat' | 'preview'>('chat')
@@ -56,7 +58,7 @@ const publishing = ref(false)
 const showShareModal = ref(false)
 const publicUrl = computed(() => {
   if (!cv.value?.public_slug) return ''
-  return `${window.location.origin}/view/${cv.value.public_slug}`
+  return `${BACKEND_URL}/view/${cv.value.public_slug}`
 })
 
 const canUndo = computed(() => {
