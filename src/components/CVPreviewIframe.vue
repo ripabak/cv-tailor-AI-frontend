@@ -11,14 +11,14 @@ const props = withDefaults(defineProps<{
 const iframeRef = ref<HTMLIFrameElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
 
+const VIEWPORT_META = '<meta name="viewport" content="width=980, initial-scale=1.0">'
+
 const scaledHtml = computed(() => {
-  if (props.scale === 1) return props.html
-  return props.html.replace(
-    '</head>',
-    `<style>
-      .print-mimic{zoom:${props.scale}}
-    </style>\n</head>`
-  )
+  let result = props.html.replace('<head>', `<head>\n${VIEWPORT_META}`)
+  if (props.scale !== 1) {
+    result = result.replace('</head>', `<style>.print-mimic{zoom:${props.scale}}</style>\n</head>`)
+  }
+  return result
 })
 
 function saveScroll() {
