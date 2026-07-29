@@ -16,7 +16,7 @@ const scaledHtml = computed(() => {
   return props.html.replace(
     '</head>',
     `<style>
-      body{transform:scale(${props.scale});transform-origin:top center}
+      .print-mimic{zoom:${props.scale}}
     </style>\n</head>`
   )
 })
