@@ -1,78 +1,39 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   html: string
-  scale?: number
-}>(), {
-  scale: 1,
-})
+}>()
 
 const iframeRef = ref<HTMLIFrameElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
 
-const VIEWPORT_META = '<meta name="viewport" content="width=980, initial-scale=1.0">'
-
-const scaledHtml = computed(() => {
-  let result = props.html.replace('<head>', `<head>\n${VIEWPORT_META}`)
-  if (props.scale !== 1) {
-    result = result.replace('</head>', `<style>.print-mimic{zoom:${props.scale}}</style>\n</head>`)
-  }
-  return result
-})
-
 function saveScroll() {
   const container = containerRef.value
-  const containerTop = container?.scrollTop ?? 0
-
-  let iframeRatio = 0
-  const win = iframeRef.value?.contentWindow
-  if (win) {
-    const doc = win.document.documentElement
-    const sh = doc.scrollHeight
-    iframeRatio = sh > 0 ? win.scrollY / sh : 0
-  }
-
-  return { containerTop, iframeRatio }
+  return { containerTop: container?.scrollTop ?? 0, containerLeft: container?.scrollLeft ?? 0 }
 }
 
-function restoreScroll(state: { containerTop: number; iframeRatio: number } | undefined) {
+function restoreScroll(state: { containerTop: number; containerLeft: number } | undefined) {
   if (!state) return
-
   const container = containerRef.value
   if (container) {
     container.scrollTop = state.containerTop
-  }
-
-  const win = iframeRef.value?.contentWindow
-  if (win) {
-    const newHeight = win.document.documentElement.scrollHeight
-    win.scrollTo(0, newHeight * state.iframeRatio)
+    container.scrollLeft = state.containerLeft
   }
 }
 
 async function print() {
-  if (!iframeRef.value) return
-
-  const doc = iframeRef.value.contentDocument
-  const html = doc ? doc.documentElement.outerHTML : iframeRef.value.srcdoc
-
-  const win = window.open('about:blank', '_blank')
-  if (!win) {
-    iframeRef.value.contentWindow?.print()
-    return
+  const win = window.open('', '_blank')
+  if (win) {
+    win.document.write(props.html)
+    win.document.close()
+    await new Promise<void>(resolve => {
+      win.onload = () => resolve()
+      if (win.document.readyState === 'complete') resolve()
+    })
+    win.focus()
+    win.print()
   }
-
-  win.document.write(html)
-  win.document.close()
-
-  await new Promise<void>(resolve => {
-    win.onload = () => resolve()
-    if (win.document.readyState === 'complete') resolve()
-  })
-
-  win.focus()
-  win.print()
 }
 
 defineExpose({ print, saveScroll, restoreScroll, iframeRef })
@@ -81,15 +42,14 @@ defineExpose({ print, saveScroll, restoreScroll, iframeRef })
 <template>
   <div ref="containerRef" class="w-full h-full overflow-auto">
     <iframe
-      v-if="html"
       ref="iframeRef"
-      :srcdoc="scaledHtml"
+      v-if="html"
+      :srcdoc="html"
       sandbox="allow-scripts allow-same-origin allow-modals"
-      class="border-0"
-      style="width: 100%; height: 100%;"
+      class="block border-0 w-full h-full"
       title="CV Preview"
-    ></iframe>
-    <div v-else class="w-full h-full flex items-center justify-center text-gray-400">
+    />
+    <div v-else class="flex items-center justify-center text-gray-400 h-full">
       <p>CV preview will appear here</p>
     </div>
   </div>
