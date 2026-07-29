@@ -11,9 +11,13 @@ const props = withDefaults(defineProps<{
 const iframeRef = ref<HTMLIFrameElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
 
-const zoomStyle = computed(() => ({
-  zoom: props.scale,
-}))
+const scaledHtml = computed(() => {
+  if (props.scale === 1) return props.html
+  return props.html.replace(
+    '</head>',
+    `<style>html{zoom:${props.scale}}</style>\n</head>`
+  )
+})
 
 function saveScroll() {
   const container = containerRef.value
@@ -77,9 +81,8 @@ defineExpose({ print, saveScroll, restoreScroll, iframeRef })
     <iframe
       v-if="html"
       ref="iframeRef"
-      :srcdoc="html"
+      :srcdoc="scaledHtml"
       sandbox="allow-scripts allow-same-origin allow-modals"
-      :style="zoomStyle"
       class="border-0"
       style="width: 100%; height: 100%;"
       title="CV Preview"
