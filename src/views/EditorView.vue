@@ -18,6 +18,84 @@ const mobileTab = ref<'chat' | 'preview'>('chat')
 
 const { messages, isStreaming, totalUsage, loadHistory, send, stop, clear } = useChat(cvId)
 
+const splitPercent = ref(30)
+const isDragging = ref(false)
+const dragStartX = ref(0)
+const dragStartPercent = ref(30)
+const splitContainer = ref<HTMLDivElement>()
+const chatPanelRef = ref<HTMLDivElement>()
+const previewPanelRef = ref<HTMLDivElement>()
+const dragHandleRef = ref<HTMLDivElement>()
+const isDesktop = ref(window.matchMedia('(min-width: 1024px)').matches)
+
+const chatWidthStyle = computed(() => {
+  if (!isDesktop.value) return undefined
+  return { flex: 'none', width: `${splitPercent.value}%` }
+})
+
+const A4_WIDTH = 794
+const A4_HEIGHT = 1123
+const HANDLE_WIDTH = 12
+
+const cvScale = computed(() => {
+  const el = splitContainer.value
+  if (!el || !isDesktop.value) return undefined
+  const totalWidth = el.clientWidth
+  const totalHeight = el.clientHeight
+  const previewWidth = totalWidth - (totalWidth * splitPercent.value / 100) - HANDLE_WIDTH
+  const scaleW = previewWidth / A4_WIDTH
+  const scaleH = totalHeight / A4_HEIGHT
+  return Math.max(0.1, Math.min(1, Math.min(scaleW, scaleH)))
+})
+
+function startDrag(e: PointerEvent) {
+  e.preventDefault()
+  isDragging.value = true
+  dragStartX.value = e.clientX
+  dragStartPercent.value = splitPercent.value
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  dragHandleRef.value?.setPointerCapture(e.pointerId)
+}
+
+function onDrag(e: PointerEvent) {
+  if (!isDragging.value || !splitContainer.value) return
+  const rect = splitContainer.value.getBoundingClientRect()
+  const deltaPct = ((e.clientX - dragStartX.value) / rect.width) * 100
+  splitPercent.value = Math.max(20, Math.min(70, dragStartPercent.value + deltaPct))
+}
+
+function stopDrag(e: PointerEvent) {
+  if (!isDragging.value) return
+  isDragging.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  try {
+    dragHandleRef.value?.releasePointerCapture(e.pointerId)
+  } catch {
+    // ignore
+  }
+}
+
+onMounted(async () => {
+  const mql = window.matchMedia('(min-width: 1024px)')
+  isDesktop.value = mql.matches
+  mql.addEventListener('change', (e) => { isDesktop.value = e.matches })
+  document.addEventListener('pointermove', onDrag)
+  document.addEventListener('pointerup', stopDrag)
+  document.addEventListener('pointercancel', stopDrag)
+  await loadCV()
+  await loadHistory()
+})
+
+onUnmounted(() => {
+  const mql = window.matchMedia('(min-width: 1024px)')
+  mql.removeEventListener('change', (e) => { isDesktop.value = e.matches })
+  document.removeEventListener('pointermove', onDrag)
+  document.removeEventListener('pointerup', stopDrag)
+  document.removeEventListener('pointercancel', stopDrag)
+})
+
 const cv = ref<CV | null>(null)
 const generatedHtml = ref('')
 const loading = ref(true)
@@ -229,14 +307,6 @@ function openShare() {
     showShareModal.value = true
   }
 }
-
-onMounted(async () => {
-  await loadCV()
-  await loadHistory()
-})
-
-onUnmounted(() => {
-})
 </script>
 
 <template>
@@ -272,11 +342,11 @@ onUnmounted(() => {
           {{ cv?.title }}
         </h2>
       </div>
-      <div class="flex items-center gap-2 overflow-x-auto flex-shrink-0">
+      <div class="flex items-center gap-1.5 overflow-x-auto flex-shrink-0">
         <button
           @click="handleUndo"
           :disabled="!canUndo"
-          class="border border-gray-300 p-1.5 rounded text-sm hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+          class="flex items-center justify-center border border-gray-300 p-1.5 rounded-md text-sm hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
           title="Undo"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -287,7 +357,7 @@ onUnmounted(() => {
         <button
           @click="handleRedo"
           :disabled="!canRedo"
-          class="border border-gray-300 p-1.5 rounded text-sm hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+          class="flex items-center justify-center border border-gray-300 p-1.5 rounded-md text-sm hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
           title="Redo"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -297,7 +367,7 @@ onUnmounted(() => {
         </button>
         <button
           @click="handlePrint"
-          class="border border-gray-300 p-1.5 rounded text-sm hover:bg-gray-50 transition-colors flex-shrink-0"
+          class="flex items-center gap-1.5 border border-gray-300 px-3 py-1.5 rounded-md text-sm hover:bg-gray-100 transition-colors flex-shrink-0 text-gray-700 font-medium"
           title="Download PDF"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -305,12 +375,12 @@ onUnmounted(() => {
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
-          <span class="hidden lg:inline ml-1.5">Download PDF</span>
+          <span class="hidden lg:inline">Download PDF</span>
         </button>
         <button
           v-if="cv?.is_published"
           @click="openShare"
-          class="border border-gray-300 p-1.5 rounded text-sm hover:bg-gray-50 transition-colors flex-shrink-0"
+          class="flex items-center justify-center border border-gray-300 p-1.5 rounded-md text-sm hover:bg-gray-100 transition-colors flex-shrink-0"
           title="Share link"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -322,22 +392,22 @@ onUnmounted(() => {
         <button
           @click="togglePublish"
           :disabled="publishing"
-          class="p-1.5 rounded text-sm font-medium transition-colors flex-shrink-0 flex items-center gap-1"
+          class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors flex-shrink-0"
           :class="cv?.is_published
             ? 'bg-green-50 text-green-700 border border-green-300 hover:bg-green-100'
             : 'bg-blue-600 text-white hover:bg-blue-700'"
           :title="cv?.is_published ? 'Unpublish' : 'Publish'"
         >
-          <svg v-if="cv?.is_published" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg v-if="cv?.is_published" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg v-else class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
             <circle cx="12" cy="12" r="3" />
           </svg>
-          <span class="hidden lg:inline">{{ publishing ? '...' : cv?.is_published ? 'Unpublish' : 'Publish' }}</span>
+          <span class="hidden lg:inline whitespace-nowrap">{{ publishing ? '...' : cv?.is_published ? 'Unpublish' : 'Publish' }}</span>
         </button>
       </div>
     </div>
@@ -364,11 +434,13 @@ onUnmounted(() => {
     </div>
 
     <!-- Split Screen -->
-    <div class="flex-1 flex overflow-hidden">
+    <div ref="splitContainer" class="flex-1 flex overflow-hidden relative">
       <!-- Left: Chat -->
       <div
-        class="w-[400px] border-r border-gray-200 max-lg:w-full max-lg:border-r-0"
-        :class="mobileTab === 'chat' ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'"
+        ref="chatPanelRef"
+        class="border-r border-gray-200 max-lg:w-full max-lg:border-r-0 min-h-0 min-w-0 overflow-hidden"
+        :class="mobileTab === 'chat' ? 'flex flex-col max-lg:flex-1' : 'hidden lg:flex lg:flex-col'"
+        :style="chatWidthStyle"
       >
         <ChatPanel
           :messages="messages"
@@ -379,15 +451,29 @@ onUnmounted(() => {
           @stop="stop"
         />
       </div>
+      <!-- Drag Handle (desktop only) -->
+      <div
+        ref="dragHandleRef"
+        class="hidden lg:flex w-3 cursor-col-resize shrink-0 relative group items-center justify-center -ml-[1.5px] z-10"
+        @pointerdown="startDrag"
+      >
+        <div class="h-8 w-0.5 rounded-full bg-gray-300 group-hover:bg-blue-500 group-active:bg-blue-600 transition-colors" />
+      </div>
       <!-- Right: Preview + Versions -->
       <div
+        ref="previewPanelRef"
         class="flex-1 min-h-0"
         :class="mobileTab === 'preview' ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'"
       >
         <div class="flex-1 min-h-0">
-          <CVPreviewIframe ref="previewRef" :html="generatedHtml" />
+          <CVPreviewIframe ref="previewRef" :html="generatedHtml" :scale="cvScale" />
         </div>
       </div>
+      <!-- Drag overlay: blocks iframe mouse capture during drag -->
+      <div
+        v-show="isDragging"
+        class="absolute inset-0 z-50 pointer-events-auto"
+      />
     </div>
     <ShareModal
       :visible="showShareModal"

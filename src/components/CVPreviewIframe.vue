@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps<{
   html: string
+  scale?: number
 }>()
 
 const A4_WIDTH = 794
@@ -11,16 +12,19 @@ const A4_HEIGHT = 1123
 const iframeRef = ref<HTMLIFrameElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
 
-const scale = ref(0.25)
+const internalScale = ref(0.25)
 let observer: ResizeObserver | null = null
 
+const scale = computed(() => props.scale ?? internalScale.value)
+
 onMounted(() => {
+  if (props.scale != null) return
   observer = new ResizeObserver(entries => {
     const entry = entries[0]
     if (!entry) return
     const w = entry.contentRect.width
     if (w > 0) {
-      scale.value = w / A4_WIDTH
+      internalScale.value = w / A4_WIDTH
     }
   })
   if (containerRef.value) {
@@ -33,10 +37,16 @@ onUnmounted(() => {
 })
 
 const paperStyle = computed(() => ({
-  zoom: scale.value,
-  transformOrigin: 'top left',
   width: A4_WIDTH + 'px',
   height: A4_HEIGHT + 'px',
+  transform: `scale(${scale.value})`,
+  transformOrigin: 'top left',
+}))
+
+const wrapperStyle = computed(() => ({
+  width: A4_WIDTH * scale.value + 'px',
+  height: A4_HEIGHT * scale.value + 'px',
+  overflow: 'hidden',
 }))
 
 function saveScroll() {
@@ -71,19 +81,21 @@ defineExpose({ print, saveScroll, restoreScroll, iframeRef })
 </script>
 
 <template>
-  <div ref="containerRef" class="w-full h-full overflow-auto">
+  <div ref="containerRef" class="w-full h-full overflow-hidden flex items-center justify-center bg-gray-50">
     <div
       v-if="html"
-      :style="paperStyle"
+      :style="wrapperStyle"
     >
-      <iframe
-        ref="iframeRef"
-        :srcdoc="html"
-        sandbox="allow-scripts allow-same-origin allow-modals"
-        class="block border-0"
-        :style="{ width: '100%', height: '100%' }"
-        title="CV Preview"
-      />
+      <div :style="paperStyle">
+        <iframe
+          ref="iframeRef"
+          :srcdoc="html"
+          sandbox="allow-scripts allow-same-origin allow-modals"
+          class="block border-0"
+          :style="{ width: '100%', height: '100%' }"
+          title="CV Preview"
+        />
+      </div>
     </div>
     <div v-else class="flex items-center justify-center text-gray-400 h-full">
       <p>CV preview will appear here</p>
