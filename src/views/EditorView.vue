@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import CVPreviewIframe from '@/components/CVPreviewIframe.vue'
+import MobileCVPreview from '@/components/MobileCVPreview.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
 import VersionTimeline from '@/components/VersionTimeline.vue'
 import NavBar from '@/components/NavBar.vue'
@@ -33,20 +34,6 @@ const chatWidthStyle = computed(() => {
   return { flex: 'none', width: `${splitPercent.value}%` }
 })
 
-const A4_WIDTH = 794
-const A4_HEIGHT = 1123
-const HANDLE_WIDTH = 12
-
-const cvScale = computed(() => {
-  const el = splitContainer.value
-  if (!el || !isDesktop.value) return undefined
-  const totalWidth = el.clientWidth
-  const totalHeight = el.clientHeight
-  const previewWidth = totalWidth - (totalWidth * splitPercent.value / 100) - HANDLE_WIDTH
-  const scaleW = previewWidth / A4_WIDTH
-  const scaleH = totalHeight / A4_HEIGHT
-  return Math.max(0.1, Math.min(1, Math.min(scaleW, scaleH)))
-})
 
 function startDrag(e: PointerEvent) {
   e.preventDefault()
@@ -230,9 +217,11 @@ async function handleUndo() {
   if (!parent) return
   try {
     pendingScrollState = savePreviewScroll()
+    console.log('[EditorView] undo saveScroll:', pendingScrollState)
     await api.post(`/cv/${cvId.value}/versions/${parent.id}/revert`)
     cv.value = await api.get<CV>(`/cv/${cvId.value}`)
     generatedHtml.value = parent.html_content
+    console.log('[EditorView] undo generatedHtml set, calling restorePreviewScroll')
     restorePreviewScroll()
     await loadVersions()
   } catch {
@@ -259,23 +248,28 @@ async function handleRedo() {
 let pendingScrollState: ReturnType<typeof savePreviewScroll> = undefined
 
 function savePreviewScroll() {
-  return previewRef.value?.saveScroll()
+  const state = previewRef.value?.saveScroll()
+  console.log('[EditorView] savePreviewScroll:', state)
+  return state
 }
 
 function restorePreviewScroll() {
   const iframeEl = previewRef.value?.iframeRef
+  console.log('[EditorView] restorePreviewScroll, iframeEl:', !!iframeEl, 'pending:', pendingScrollState)
   if (!iframeEl) return
 
   const onLoad = () => {
+    console.log('[EditorView] iframe load event fired')
     iframeEl.removeEventListener('load', onLoad)
     previewRef.value?.restoreScroll(pendingScrollState)
     pendingScrollState = undefined
+    console.log('[EditorView] restoreScroll called, pending cleared')
   }
 
   iframeEl.addEventListener('load', onLoad)
 }
 
-const previewRef = ref<InstanceType<typeof CVPreviewIframe> | null>(null)
+const previewRef = ref<any>(null)
 
 function handlePrint() {
   previewRef.value?.print()
@@ -466,7 +460,8 @@ function openShare() {
         :class="mobileTab === 'preview' ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'"
       >
         <div class="flex-1 min-h-0">
-          <CVPreviewIframe ref="previewRef" :html="generatedHtml" :scale="cvScale" />
+          <CVPreviewIframe v-if="isDesktop" ref="previewRef" :html="generatedHtml" />
+          <MobileCVPreview v-else ref="previewRef" :html="generatedHtml" />
         </div>
       </div>
       <!-- Drag overlay: blocks iframe mouse capture during drag -->

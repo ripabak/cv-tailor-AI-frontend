@@ -10,15 +10,20 @@ const iframeRef = ref<HTMLIFrameElement | null>(null)
 function saveScroll() {
   const doc = iframeRef.value?.contentDocument
   const el = doc?.documentElement
+  console.log('[MobileCVPreview] saveScroll:', { top: el?.scrollTop, left: el?.scrollLeft })
   return { top: el?.scrollTop ?? 0, left: el?.scrollLeft ?? 0 }
 }
 
 function restoreScroll(state: { top: number; left: number } | undefined) {
+  console.log('[MobileCVPreview] restoreScroll called:', state)
   if (!state) return
   const doc = iframeRef.value?.contentDocument
   if (doc?.documentElement) {
     doc.documentElement.scrollTop = state.top
     doc.documentElement.scrollLeft = state.left
+    console.log('[MobileCVPreview] restoreScroll applied:', { top: state.top, left: state.left })
+  } else {
+    console.log('[MobileCVPreview] restoreScroll failed: no documentElement')
   }
 }
 
@@ -45,7 +50,7 @@ defineExpose({ print, saveScroll, restoreScroll, iframeRef })
       v-if="html"
       ref="iframeRef"
       :srcdoc="html"
-      sandbox="allow-scripts allow-same-origin allow-modals"
+      sandbox="allow-scripts allow-same-origin"
       class="block border-0 w-full h-full"
       title="CV Preview"
     />
