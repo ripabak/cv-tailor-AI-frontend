@@ -13,7 +13,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-screen flex items-center justify-center text-gray-500">
-    Redirecting...
+  <div class="min-h-[100dvh] flex items-center justify-center text-[10px] font-mono tracking-widest text-text-tertiary">
+    [ REDIRECTING... ]
   </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { PhPaperPlaneRight, PhStop } from '@phosphor-icons/vue'
 
 const props = withDefaults(defineProps<{
   disabled?: boolean
@@ -39,23 +40,25 @@ function handleKeydown(e: KeyboardEvent) {
       :disabled="disabled"
       :rows="1"
       @keydown="handleKeydown"
-      class="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary disabled:opacity-50 resize-none"
+      class="flex-1 min-h-[44px] max-h-40 border border-border bg-surface px-3 py-2.5 text-sm text-text placeholder:text-text-tertiary focus:outline-none focus:border-primary disabled:opacity-50 resize-none transition-colors normal-case"
     />
     <button
       v-if="!disabled"
       type="submit"
       :disabled="!text.trim()"
-      class="rounded-lg bg-primary-dark px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
+      class="inline-flex items-center justify-center w-10 h-11 border border-primary bg-primary text-primary-on hover:bg-primary-hover disabled:opacity-40 transition-colors"
+      aria-label="Send"
     >
-      Send
+      <PhPaperPlaneRight class="w-4 h-4" weight="bold" />
     </button>
     <button
       v-else
       type="button"
       @click="emit('stop')"
-      class="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 transition-colors"
+      class="inline-flex items-center justify-center w-10 h-11 border border-error bg-error text-primary-on hover:bg-error-text transition-colors"
+      aria-label="Stop"
     >
-      Stop
+      <PhStop class="w-4 h-4" weight="bold" />
     </button>
   </form>
 </template>

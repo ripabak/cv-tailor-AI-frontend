@@ -45,7 +45,7 @@ defineExpose({ print, saveScroll, restoreScroll, iframeRef })
 </script>
 
 <template>
-  <div class="w-full h-full bg-white">
+  <div class="w-full h-full bg-surface border border-border">
     <iframe
       v-if="html"
       ref="iframeRef"
@@ -56,9 +56,9 @@ defineExpose({ print, saveScroll, restoreScroll, iframeRef })
     />
     <div
       v-else
-      class="flex items-center justify-center text-gray-400 h-full p-4"
+      class="flex items-center justify-center h-full p-4 text-[10px] font-mono tracking-widest text-text-tertiary"
     >
-      <p>CV preview will appear here</p>
+      [ CV PREVIEW WILL APPEAR HERE ]
     </div>
   </div>
 </template>

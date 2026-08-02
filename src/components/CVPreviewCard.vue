@@ -12,7 +12,6 @@ defineEmits<{ click: [] }>()
 
 const paperRef = ref<HTMLDivElement>()
 const scale = ref(0.25)
-
 let observer: ResizeObserver | null = null
 
 const A4_WIDTH = 794
@@ -33,13 +32,9 @@ onMounted(() => {
     const entry = entries[0]
     if (!entry) return
     const w = entry.contentRect.width
-    if (w > 0) {
-      scale.value = w / A4_WIDTH
-    }
+    if (w > 0) scale.value = w / A4_WIDTH
   })
-  if (paperRef.value) {
-    observer.observe(paperRef.value)
-  }
+  if (paperRef.value) observer.observe(paperRef.value)
 })
 
 onUnmounted(() => {
@@ -49,14 +44,12 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="bg-gray-50 rounded-xl overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+    class="group border-r border-b border-border bg-surface cursor-pointer transition-colors hover:bg-surface-secondary"
     @click="$emit('click')"
   >
-    <div class="px-4 pt-4 pb-0">
-      <div
-        class="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.12)] overflow-hidden"
-        style="aspect-ratio: 210 / 297"
-      >
+    <!-- Preview -->
+    <div class="border-b border-border">
+      <div class="aspect-[210/297] bg-surface-secondary overflow-hidden">
         <div ref="paperRef" class="relative w-full h-full">
           <div
             v-if="previewHtml"
@@ -77,23 +70,28 @@ onUnmounted(() => {
           </div>
           <div
             v-else
-            class="flex items-center justify-center w-full h-full text-gray-400 text-sm p-4 text-center"
+            class="flex items-center justify-center w-full h-full text-[10px] font-mono tracking-widest text-text-tertiary"
           >
-            {{ loading ? 'Loading...' : 'No preview' }}
+            {{ loading ? '[ LOADING... ]' : '[ NO PREVIEW ]' }}
           </div>
         </div>
       </div>
     </div>
 
-    <div class="px-4 pb-4 pt-3">
-      <h3 class="font-semibold text-gray-800 truncate text-[15px]">
-        {{ title }}
-      </h3>
-      <p v-if="subtitle" class="text-xs text-gray-500 mt-0.5">
-        {{ subtitle }}
-      </p>
-      <div v-if="$slots.actions" class="flex justify-end mt-2.5" @click.stop>
-        <slot name="actions" />
+    <!-- Info -->
+    <div class="p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h3 class="font-sans text-sm font-bold text-text truncate uppercase tracking-tight">
+            {{ title }}
+          </h3>
+          <p v-if="subtitle" class="text-[10px] font-mono tracking-widest text-text-tertiary mt-1">
+            {{ subtitle }}
+          </p>
+        </div>
+        <div v-if="$slots.actions" class="flex items-center gap-1 shrink-0" @click.stop>
+          <slot name="actions" />
+        </div>
       </div>
     </div>
   </div>

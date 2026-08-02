@@ -5,7 +5,21 @@
 - **Build Tool:** Vite 8
 - **Routing:** Vue Router 5 (createWebHistory)
 - **Styling:** Tailwind CSS v4 (via `@tailwindcss/vite` Vite plugin)
+- **Icons:** Phosphor Icons (`@phosphor-icons/vue`)
+- **Font:** Inter Variable (`@fontsource-variable/inter`, self-hosted)
 - **Package Manager:** bun
+
+## Design System
+
+- **Archetype:** Industrial Brutalism / Tactical Telemetry — dark CRT terminal, single hazard-red accent.
+- **Palette:** near-black surface (`#0A0A0A`), off-white text (`#EAEAEA`), red accent (`#E61919`), terminal green (`#4AF626`) reserved for one status use.
+- **Mode:** dark-only; `html` always has `class="dark"`.
+- **Tokens:** defined in `src/shared-styles/tokens.css` and used as Tailwind utilities (`bg-surface`, `text-text`, `border-border`, etc.).
+- **Radius:** zero — all corners are 90°.
+- **Shadows:** none.
+- **Icons:** Phosphor Icons via `@phosphor-icons/vue`. Import only the icons you need.
+- **Typography:** JetBrains Mono for body/data; Inter Black for structural sans-serif headers.
+- **Effects:** global CRT scanline overlay, `prefers-reduced-motion` support.
 
 ## How to Run
 
@@ -23,40 +37,50 @@ VITE_API_URL=http://localhost:8000/api
 
 ```
 frontend/src/
-├── main.ts              # createApp + router + tailwind import
-├── App.vue              # <RouterView /> wrapper
+├── main.ts                     # createApp + router + tailwind import
+├── App.vue                     # <RouterView /> wrapper
 ├── router/
-│   └── index.ts         # Vue Router config + navigation guards
+│   └── index.ts                # Vue Router config + navigation guards
 ├── composables/
-│   ├── useAuth.ts       # Auth state: token (localStorage), login/register/logout
-│   └── useApi.ts        # Fetch wrapper: api.get/post/delete with auto-auth-header
+│   ├── useAuth.ts              # Auth state: token (localStorage), login/register/logout
+│   └── useApi.ts               # Fetch wrapper: api.get/post/delete with auto-auth-header
 ├── views/
-│   ├── LoginView.vue    # /login
-│   ├── RegisterView.vue # /register
-│   ├── DashboardView.vue# /dashboard — list user's CVs
-│   ├── TemplatesView.vue# /templates — gallery of templates
-│   └── EditorView.vue   # /editor/:cvId — split chat + preview
+│   ├── LandingView.vue         # / — marketing landing page
+│   ├── LoginView.vue           # /login
+│   ├── RegisterView.vue        # /register
+│   ├── DashboardView.vue       # /dashboard — list user's CVs
+│   ├── TemplatesView.vue       # /templates — gallery of templates
+│   ├── EditorView.vue          # /editor/:cvId — split chat + preview
+│   └── PublicCVView.vue        # /cv/:slug — public redirect
 ├── components/
-│   ├── NavBar.vue       # Top nav with user info + logout
-│   ├── ChatPanel.vue    # Chat bubble UI (left panel)
-│   ├── CVPreviewIframe.vue # iframe srcdoc with sandbox
-│   └── VersionPanel.vue # Version history list + restore
+│   ├── NavBar.vue              # Top nav with user info + logout
+│   ├── ChatPanel.vue           # Chat bubble UI (left panel)
+│   ├── CVPreviewIframe.vue     # iframe srcdoc with sandbox
+│   ├── CVPreviewCard.vue       # Thumbnail card for CVs and templates
+│   ├── Pagination.vue          # Page controls
+│   ├── ShareModal.vue          # Copy public link
+│   ├── VersionTimeline.vue     # Compact version history
+│   └── chat/                   # Chat sub-components
 ├── types/
-│   └── index.ts         # TS interfaces: User, CV, CVVersion, ChatMessage, etc.
+│   └── index.ts                # TS interfaces
+├── shared-styles/
+│   ├── tokens.css              # Color, radius, shadow tokens + dark mode
+│   └── base.css                # Base typography, markdown, scrollbar styles
 └── assets/
-    └── main.css         # @import "tailwindcss"
+    └── main.css                # Font + tailwind + tokens + base
 ```
 
 ## Routes
 
 | Path | View | Auth | Description |
 |------|------|------|-------------|
-| `/` | — | No | Redirects to /dashboard |
+| `/` | LandingView | No | Marketing landing page |
 | `/login` | LoginView | No | Email/password form |
 | `/register` | RegisterView | No | Email + display_name + password |
 | `/dashboard` | DashboardView | Yes | List CVs, create new |
 | `/templates` | TemplatesView | Yes | Pick template → create CV |
 | `/editor/:cvId` | EditorView | Yes | Chat + iframe preview + versions |
+| `/cv/:slug` | PublicCVView | No | Redirect to public bare CV |
 
 **Guard:** Router beforeEach checks localStorage `token`. If missing and route requires auth → redirect `/login`. If token exists and on login/register → redirect `/dashboard`.
 
@@ -84,26 +108,36 @@ api.delete<T>('/path')
 ## Components
 
 ### ChatPanel
-- Props: `messages: ChatMessage[]` (role: 'user' | 'ai', content)
-- Emits: `send(prompt: string)`
+- Props: `messages: StreamMessage[]`, `isStreaming: boolean`, `totalUsage: object`
+- Emits: `send(prompt: string)`, `clear`, `stop`
 - Auto-scroll to bottom on new message
 - Textarea + Send button (Enter to send)
+- Tool-call bubbles with status + expandable output
 
-### CVPreviewIframe
+### CVPreviewIframe / MobileCVPreview
 - Props: `html: string`
-- Renders via `<iframe :srcdoc="html" sandbox="allow-scripts allow-popups" />`
+- Renders via `<iframe :srcdoc="html" sandbox="..." />`
 - Empty state when no HTML
+- Exposes `print()`, `saveScroll()`, `restoreScroll()`
 
-### VersionPanel
-- Props: `cvId: number`, `currentHtml: string`
-- Emits: `restored()` — after successful revert
-- Fetches version list on mount
-- Highlights current version, disables restore for current
+### CVPreviewCard
+- Props: `title`, `html`, `subtitle`, `loading`
+- Emits: `click`
+- Scaled A4 iframe thumbnail with optional actions slot
 
 ### NavBar
-- Shows when `isAuthenticated` is true
+- Sticky top nav, shows when `isAuthenticated` is true
 - Links: My CVs, Templates, Logout
 - Shows `user.display_name`
+
+### Pagination
+- Props: `page`, `totalPages`
+- Emits: `change(page)`
+
+### ShareModal
+- Props: `visible`, `url`
+- Emits: `close`
+- Copy-to-clipboard with feedback
 
 ## Editor Flow (EditorView)
 

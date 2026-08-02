@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import { PhList, PhX } from '@phosphor-icons/vue'
 
 const router = useRouter()
 const { user, isAuthenticated, logout } = useAuth()
@@ -11,62 +12,91 @@ function handleLogout() {
   logout()
   router.push('/login')
 }
-
-function closeMenu() {
-  menuOpen.value = false
-}
 </script>
 
 <template>
-  <nav v-if="isAuthenticated" class="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between">
-    <div class="flex items-center gap-6">
-      <router-link
-        to="/dashboard"
-        class="text-lg font-bold text-gray-800 hover:text-blue-600 transition-colors"
-        @click="closeMenu"
-      >
-        CV Tailor
-      </router-link>
-      <div class="hidden md:flex gap-4">
-        <router-link to="/dashboard" class="text-sm text-gray-600 hover:text-gray-900">My CVs</router-link>
-        <router-link to="/templates" class="text-sm text-gray-600 hover:text-gray-900">Templates</router-link>
+  <nav
+    v-if="isAuthenticated"
+    class="sticky top-0 z-50 h-14 border-b border-border bg-surface"
+  >
+    <div class="max-w-7xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <router-link
+          to="/dashboard"
+          class="font-sans text-sm font-black tracking-tighter text-text hover:text-primary transition-colors"
+        >
+          CV TAILOR<span class="text-text-tertiary">™</span>
+        </router-link>
+
+        <div class="hidden md:flex items-center gap-0 border-l border-border">
+          <router-link
+            to="/dashboard"
+            class="px-4 py-2 text-xs font-mono tracking-widest text-text-secondary border-r border-border hover:bg-surface-secondary hover:text-text transition-colors"
+            active-class="bg-surface-secondary text-text"
+          >
+            [ MY_CVS ]
+          </router-link>
+          <router-link
+            to="/templates"
+            class="px-4 py-2 text-xs font-mono tracking-widest text-text-secondary border-r border-border hover:bg-surface-secondary hover:text-text transition-colors"
+            active-class="bg-surface-secondary text-text"
+          >
+            [ TEMPLATES ]
+          </router-link>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <span class="hidden md:block text-xs font-mono tracking-widest text-text-tertiary">
+          {{ user?.display_name }}
+        </span>
+        <button
+          @click="handleLogout"
+          class="hidden md:block px-3 py-1.5 text-xs font-mono tracking-widest text-text-secondary border border-border hover:border-primary hover:text-primary transition-colors"
+        >
+          [ LOGOUT ]
+        </button>
+        <button
+          @click="menuOpen = !menuOpen"
+          class="md:hidden inline-flex items-center justify-center w-9 h-9 border border-border text-text-secondary hover:bg-surface-secondary transition-colors"
+          :aria-label="menuOpen ? 'Close menu' : 'Open menu'"
+          :aria-expanded="menuOpen"
+        >
+          <PhList v-if="!menuOpen" class="w-5 h-5" weight="bold" />
+          <PhX v-else class="w-5 h-5" weight="bold" />
+        </button>
       </div>
     </div>
-    <div class="flex items-center gap-4">
-      <span class="hidden md:inline text-sm text-gray-500">{{ user?.display_name }}</span>
-      <button
-        @click="handleLogout"
-        class="hidden md:inline text-sm text-gray-500 hover:text-red-600 transition-colors cursor-pointer"
-      >
-        Logout
-      </button>
-      <button
-        @click="menuOpen = !menuOpen"
-        class="md:hidden p-1.5 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-        aria-label="Toggle menu"
-      >
-        <svg v-if="!menuOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-        <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
   </nav>
+
   <div
     v-if="menuOpen"
-    class="md:hidden bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex flex-col gap-3 shadow-sm"
+    class="md:hidden border-b border-border bg-surface-secondary px-4 sm:px-6 py-3"
   >
-    <router-link to="/dashboard" class="text-sm text-gray-600 hover:text-gray-900 py-1" @click="closeMenu">My CVs</router-link>
-    <router-link to="/templates" class="text-sm text-gray-600 hover:text-gray-900 py-1" @click="closeMenu">Templates</router-link>
-    <hr class="border-gray-200" />
-    <span class="text-sm text-gray-500 py-1">{{ user?.display_name }}</span>
-    <button
-      @click="handleLogout"
-      class="text-sm text-gray-500 hover:text-red-600 transition-colors text-left py-1 cursor-pointer"
-    >
-      Logout
-    </button>
+    <div class="flex flex-col border border-border">
+      <router-link
+        to="/dashboard"
+        class="px-4 py-3 text-xs font-mono tracking-widest text-text-secondary border-b border-border hover:bg-surface hover:text-text"
+        @click="menuOpen = false"
+      >
+        [ MY_CVS ]
+      </router-link>
+      <router-link
+        to="/templates"
+        class="px-4 py-3 text-xs font-mono tracking-widest text-text-secondary border-b border-border hover:bg-surface hover:text-text"
+        @click="menuOpen = false"
+      >
+        [ TEMPLATES ]
+      </router-link>
+      <div class="px-4 py-3 text-xs font-mono tracking-widest text-text-tertiary border-b border-border">
+        {{ user?.display_name }}
+      </div>
+      <button
+        @click="handleLogout"
+        class="px-4 py-3 text-left text-xs font-mono tracking-widest text-primary hover:bg-primary-light transition-colors"
+      >
+        [ LOGOUT ]
+      </button>
+    </div>
   </div>
 </template>

@@ -9,6 +9,16 @@ import ShareModal from '@/components/ShareModal.vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/composables/useApi'
 import { useChat } from '@/composables/useChat'
+import {
+  PhArrowCounterClockwise,
+  PhArrowClockwise,
+  PhPrinter,
+  PhShareNetwork,
+  PhGlobe,
+  PhEyeSlash,
+  PhChatTeardropText,
+  PhFiles,
+} from '@phosphor-icons/vue'
 import type { CV, CVVersion } from '@/types'
 
 const BACKEND_URL = (import.meta.env.VITE_API_URL || (window as any).__APP_CONFIG__?.API_URL || 'http://localhost:8000/api').replace(/\/api\/?$/, '')
@@ -305,15 +315,15 @@ function openShare() {
 
 <template>
   <NavBar />
-  <div v-if="loading" class="flex items-center justify-center h-64 text-gray-500">
-    Loading...
+  <div v-if="loading" class="min-h-[calc(100dvh-3.5rem)] flex items-center justify-center text-xs font-mono tracking-widest text-text-secondary">
+    [ LOADING CV... ]
   </div>
-  <div v-else-if="error" class="flex items-center justify-center h-64 text-red-500">
-    {{ error }}
+  <div v-else-if="error" class="min-h-[calc(100dvh-3.5rem)] flex items-center justify-center text-error px-6 text-center text-xs font-mono tracking-widest">
+    [ ERROR: {{ error }} ]
   </div>
-  <div v-else class="h-[calc(100vh-61px)] flex flex-col">
+  <div v-else class="h-[calc(100dvh-3.5rem)] flex flex-col bg-surface">
     <!-- Toolbar -->
-    <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-white gap-3 overflow-x-auto">
+    <div class="flex items-center justify-between gap-3 px-3 py-2 border-b border-border bg-surface-secondary shrink-0">
       <div class="min-w-0 flex-shrink-0">
         <div v-if="editingTitle" class="flex items-center gap-2">
           <input
@@ -323,86 +333,72 @@ function openShare() {
             @keydown.escape="cancelEditTitle"
             @blur="saveTitle"
             :disabled="savingTitle"
-            class="font-semibold text-gray-800 bg-transparent appearance-none shadow-none focus:shadow-none focus:outline-none focus:ring-0 border-0 outline-0 ring-0 px-0 py-0.5 w-full max-w-[140px] sm:max-w-xs lg:max-w-md" style="border: none; outline: none; box-shadow: none;"
+            class="font-sans font-bold text-text bg-transparent focus:outline-none border-b border-primary px-0 py-0.5 w-full max-w-[140px] sm:max-w-xs lg:max-w-md normal-case"
             maxlength="200"
           />
         </div>
-        <h2
+        <div
           v-else
           @click="startEditingTitle"
-          class="font-semibold text-gray-800 truncate max-w-[140px] sm:max-w-xs lg:max-w-md cursor-pointer hover:text-blue-600 transition-colors"
+          class="group inline-flex items-center gap-2 font-sans font-bold text-text truncate max-w-[140px] sm:max-w-xs lg:max-w-md cursor-pointer hover:text-primary transition-colors"
           title="Click to rename"
         >
-          {{ cv?.title }}
-        </h2>
+          <PhFiles class="w-4 h-4 text-text-tertiary shrink-0" weight="regular" />
+          <span class="truncate uppercase tracking-tight">{{ cv?.title }}</span>
+          <span class="opacity-0 group-hover:opacity-100 text-[10px] font-mono tracking-widest text-text-tertiary transition-opacity">[EDIT]</span>
+        </div>
       </div>
-      <div class="flex items-center gap-1.5 overflow-x-auto flex-shrink-0">
-        <button
-          @click="handleUndo"
-          :disabled="!canUndo"
-          class="flex items-center justify-center border border-gray-300 p-1.5 rounded-md text-sm hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-          title="Undo"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="1 4 1 10 7 10" />
-            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-          </svg>
-        </button>
-        <button
-          @click="handleRedo"
-          :disabled="!canRedo"
-          class="flex items-center justify-center border border-gray-300 p-1.5 rounded-md text-sm hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-          title="Redo"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10" />
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-          </svg>
-        </button>
-        <button
-          @click="handlePrint"
-          class="flex items-center gap-1.5 border border-gray-300 px-3 py-1.5 rounded-md text-sm hover:bg-gray-100 transition-colors flex-shrink-0 text-gray-700 font-medium"
-          title="Download PDF"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          <span class="hidden lg:inline">Download PDF</span>
-        </button>
-        <button
-          v-if="cv?.is_published"
-          @click="openShare"
-          class="flex items-center justify-center border border-gray-300 p-1.5 rounded-md text-sm hover:bg-gray-100 transition-colors flex-shrink-0"
-          title="Share link"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-            <polyline points="16 6 12 2 8 6" />
-            <line x1="12" y1="2" x2="12" y2="15" />
-          </svg>
-        </button>
-        <button
-          @click="togglePublish"
-          :disabled="publishing"
-          class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors flex-shrink-0"
-          :class="cv?.is_published
-            ? 'bg-green-50 text-green-700 border border-green-300 hover:bg-green-100'
-            : 'bg-blue-600 text-white hover:bg-blue-700'"
-          :title="cv?.is_published ? 'Unpublish' : 'Publish'"
-        >
-          <svg v-if="cv?.is_published" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <svg v-else class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-          <span class="hidden lg:inline whitespace-nowrap">{{ publishing ? '...' : cv?.is_published ? 'Unpublish' : 'Publish' }}</span>
-        </button>
+
+      <div class="flex items-center gap-1 sm:gap-1.5 overflow-x-auto flex-shrink-0">
+        <div class="flex items-center gap-1 sm:gap-1.5 border-r border-border pr-2 sm:pr-3">
+          <button
+            @click="handleUndo"
+            :disabled="!canUndo"
+            class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-text-secondary border border-border hover:bg-surface hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Undo"
+          >
+            <<< UNDO
+          </button>
+          <button
+            @click="handleRedo"
+            :disabled="!canRedo"
+            class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-text-secondary border border-border hover:bg-surface hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Redo"
+          >
+            REDO >>>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-1 sm:gap-1.5">
+          <button
+            @click="handlePrint"
+            class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-text-secondary border border-border hover:bg-surface hover:text-text transition-colors"
+            title="Download PDF"
+          >
+            [ PDF ]
+          </button>
+
+          <button
+            v-if="cv?.is_published"
+            @click="openShare"
+            class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-primary border border-primary bg-primary-light hover:bg-surface transition-colors"
+            title="Share link"
+          >
+            [ SHARE ]
+          </button>
+
+          <button
+            @click="togglePublish"
+            :disabled="publishing"
+            class="px-3 py-1.5 text-[10px] font-mono tracking-widest transition-colors"
+            :class="cv?.is_published
+              ? 'text-success bg-success-bg border border-success hover:bg-success-bg'
+              : 'bg-primary text-primary-on border border-primary hover:bg-primary-hover'"
+            :title="cv?.is_published ? 'Unpublish' : 'Publish'"
+          >
+            {{ publishing ? '...' : cv?.is_published ? '[ UNPUBLISH ]' : '[ PUBLISH ]' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -410,20 +406,20 @@ function openShare() {
     <VersionTimeline :versions="activeVersions" :current-index="0" />
 
     <!-- Mobile tab selector -->
-    <div class="lg:hidden flex border-b border-gray-200 bg-white">
+    <div class="lg:hidden flex border-b border-border bg-surface-secondary">
       <button
         @click="mobileTab = 'chat'"
-        class="flex-1 py-2.5 text-sm font-medium text-center transition-colors"
-        :class="mobileTab === 'chat' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'"
+        class="flex-1 py-2.5 text-[10px] font-mono tracking-widest border-r border-border transition-colors"
+        :class="mobileTab === 'chat' ? 'text-primary bg-surface' : 'text-text-secondary hover:bg-surface hover:text-text'"
       >
-        Chat
+        [ CHAT ]
       </button>
       <button
         @click="mobileTab = 'preview'"
-        class="flex-1 py-2.5 text-sm font-medium text-center transition-colors"
-        :class="mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'"
+        class="flex-1 py-2.5 text-[10px] font-mono tracking-widest transition-colors"
+        :class="mobileTab === 'preview' ? 'text-primary bg-surface' : 'text-text-secondary hover:bg-surface hover:text-text'"
       >
-        CV Preview
+        [ PREVIEW ]
       </button>
     </div>
 
@@ -432,7 +428,7 @@ function openShare() {
       <!-- Left: Chat -->
       <div
         ref="chatPanelRef"
-        class="border-r border-gray-200 max-lg:w-full max-lg:border-r-0 min-h-0 min-w-0 overflow-hidden"
+        class="border-r border-border max-lg:w-full max-lg:border-r-0 min-h-0 min-w-0 overflow-hidden"
         :class="mobileTab === 'chat' ? 'flex flex-col max-lg:flex-1' : 'hidden lg:flex lg:flex-col'"
         :style="chatWidthStyle"
       >
@@ -445,31 +441,35 @@ function openShare() {
           @stop="stop"
         />
       </div>
+
       <!-- Drag Handle (desktop only) -->
       <div
         ref="dragHandleRef"
         class="hidden lg:flex w-3 cursor-col-resize shrink-0 relative group items-center justify-center -ml-[1.5px] z-10"
         @pointerdown="startDrag"
       >
-        <div class="h-8 w-0.5 rounded-full bg-gray-300 group-hover:bg-blue-500 group-active:bg-blue-600 transition-colors" />
+        <div class="h-8 w-0.5 bg-border group-hover:bg-primary transition-colors" />
       </div>
-      <!-- Right: Preview + Versions -->
+
+      <!-- Right: Preview -->
       <div
         ref="previewPanelRef"
         class="flex-1 min-h-0"
         :class="mobileTab === 'preview' ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'"
       >
-        <div class="flex-1 min-h-0">
+        <div class="flex-1 min-h-0 bg-surface">
           <CVPreviewIframe v-if="isDesktop" ref="previewRef" :html="generatedHtml" />
           <MobileCVPreview v-else ref="previewRef" :html="generatedHtml" />
         </div>
       </div>
-      <!-- Drag overlay: blocks iframe mouse capture during drag -->
+
+      <!-- Drag overlay -->
       <div
         v-show="isDragging"
         class="absolute inset-0 z-50 pointer-events-auto"
       />
     </div>
+
     <ShareModal
       :visible="showShareModal"
       :url="publicUrl"

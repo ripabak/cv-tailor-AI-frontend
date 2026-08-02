@@ -2,15 +2,12 @@
 </script>
 
 <template>
-  <div class="flex justify-end items-end gap-2">
-    <div class="max-w-[80%] rounded-xl rounded-br-sm bg-primary-dark text-white px-4 py-3 text-sm leading-relaxed">
+  <div class="flex justify-end gap-3">
+    <div class="max-w-[85%] border border-primary bg-primary text-primary-on px-4 py-3 text-sm leading-relaxed normal-case">
       <slot />
     </div>
-    <div class="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-surface-tertiary border border-border">
-      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
+    <div class="w-7 h-7 border border-border bg-surface-secondary flex items-center justify-center text-[10px] font-mono tracking-widest text-text-secondary shrink-0">
+      OP
     </div>
   </div>
 </template>

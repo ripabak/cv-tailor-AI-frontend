@@ -33,24 +33,25 @@ function goTo(p: number) {
 </script>
 
 <template>
-  <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-6">
+  <div v-if="totalPages > 1" class="flex items-center justify-center gap-0 mt-8 border border-border w-fit mx-auto">
     <button
       :disabled="page <= 1"
-      class="px-3 py-1.5 text-sm rounded border border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+      class="px-3 py-2 text-[10px] font-mono tracking-widest text-text-secondary border-r border-border hover:bg-surface-secondary hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       @click="goTo(page - 1)"
+      aria-label="Previous page"
     >
-      Prev
+      <<< PREV
     </button>
 
     <template v-for="p in pages" :key="p">
-      <span v-if="p === '...'" class="px-2 text-gray-400">...</span>
+      <span v-if="p === '...'" class="px-3 py-2 text-[10px] font-mono tracking-widest text-text-tertiary border-r border-border">...</span>
       <button
         v-else
         :class="[
-          'px-3 py-1.5 text-sm rounded border transition-colors min-w-[36px]',
+          'min-w-[40px] px-3 py-2 text-[10px] font-mono tracking-widest border-r border-border transition-colors',
           p === page
-            ? 'bg-blue-600 text-white border-blue-600'
-            : 'border-gray-300 hover:bg-gray-100',
+            ? 'bg-primary text-primary-on'
+            : 'text-text-secondary hover:bg-surface-secondary hover:text-text',
         ]"
         @click="goTo(p)"
       >
@@ -60,10 +61,11 @@ function goTo(p: number) {
 
     <button
       :disabled="page >= totalPages"
-      class="px-3 py-1.5 text-sm rounded border border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+      class="px-3 py-2 text-[10px] font-mono tracking-widest text-text-secondary hover:bg-surface-secondary hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       @click="goTo(page + 1)"
+      aria-label="Next page"
     >
-      Next
+      NEXT >>>
     </button>
   </div>
 </template>

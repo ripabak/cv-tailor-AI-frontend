@@ -5,6 +5,7 @@ import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
 const { login } = useAuth()
+
 const email = ref('')
 const password = ref('')
 const error = ref('')
@@ -25,41 +26,70 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50">
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-      <h1 class="text-2xl font-bold text-center mb-6">Login</h1>
-      <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input
-            v-model="email"
-            type="email"
-            required
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+  <div class="min-h-[100dvh] flex items-center justify-center bg-surface p-4">
+    <div class="w-full max-w-md border border-border bg-surface-secondary p-1">
+      <div class="border border-border p-8">
+        <div class="mb-8">
+          <router-link to="/" class="font-sans text-sm font-black tracking-tighter text-text hover:text-primary transition-colors">
+            CV TAILOR<span class="text-text-tertiary">™</span>
+          </router-link>
+          <div class="text-[10px] font-mono tracking-widest text-primary border border-primary inline-block px-2 py-0.5 mt-4">
+            [ AUTHENTICATE ]
+          </div>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-          <input
-            v-model="password"
-            type="password"
-            required
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        <p v-if="error" class="text-red-500 text-sm">{{ error }}</p>
-        <button
-          type="submit"
-          :disabled="loading"
-          class="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-        >
-          {{ loading ? 'Logging in...' : 'Login' }}
-        </button>
-      </form>
-      <p class="text-center text-sm text-gray-500 mt-4">
-        Don't have an account?
-        <router-link to="/register" class="text-blue-600 hover:underline">Register</router-link>
-      </p>
+
+        <form @submit.prevent="handleSubmit" class="flex flex-col gap-5">
+          <div>
+            <label for="email" class="block text-[10px] font-mono tracking-widest text-text-tertiary mb-2">
+              [ EMAIL ]
+            </label>
+            <input
+              id="email"
+              v-model="email"
+              type="email"
+              required
+              autocomplete="email"
+              class="w-full border border-border bg-surface px-3 py-2.5 text-sm text-text placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors normal-case"
+              placeholder="you@example.com"
+            />
+          </div>
+
+          <div>
+            <label for="password" class="block text-[10px] font-mono tracking-widest text-text-tertiary mb-2">
+              [ PASSWORD ]
+            </label>
+            <input
+              id="password"
+              v-model="password"
+              type="password"
+              required
+              autocomplete="current-password"
+              class="w-full border border-border bg-surface px-3 py-2.5 text-sm text-text placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors normal-case"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <div
+            v-if="error"
+            class="border border-error bg-error-bg px-3 py-2 text-xs font-mono text-error"
+          >
+            [ ERROR: {{ error }} ]
+          </div>
+
+          <button
+            type="submit"
+            :disabled="loading"
+            class="w-full px-4 py-3 text-xs font-mono tracking-widest bg-primary text-primary-on border border-primary hover:bg-primary-hover disabled:opacity-50 transition-colors"
+          >
+            {{ loading ? 'AUTHENTICATING...' : 'SIGN IN >>>' }}
+          </button>
+        </form>
+
+        <p class="mt-6 text-[10px] font-mono tracking-widest text-text-tertiary normal-case">
+          NO ACCOUNT?
+          <router-link to="/register" class="text-primary hover:text-primary-hover hover:underline">CREATE ONE</router-link>
+        </p>
+      </div>
     </div>
   </div>
 </template>
