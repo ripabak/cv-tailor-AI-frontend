@@ -74,6 +74,7 @@ export function useChat(cvId: Ref<number>) {
   const messages = ref<StreamMessage[]>([])
   const isStreaming = ref(false)
   const totalUsage = ref<{ input_tokens?: number; output_tokens?: number; total_tokens?: number; calls?: number }>({})
+  const lastRunId = ref<string | null>(null)
   const threadId = ref<string | null>(null)
   const lastSeq = ref(0)
   let abort: AbortController | null = null
@@ -196,9 +197,18 @@ export function useChat(cvId: Ref<number>) {
           }
         } else if (method === 'message_end') {
           msgIndex.delete(data.id)
-          if (data.total_usage) {
-            totalUsage.value = data.total_usage as typeof totalUsage.value
+          const u = data.usage as
+            | { input_tokens?: number; output_tokens?: number; total_tokens?: number }
+            | undefined
+          if (u) {
+            totalUsage.value = {
+              input_tokens: (totalUsage.value.input_tokens || 0) + (u.input_tokens || 0),
+              output_tokens: (totalUsage.value.output_tokens || 0) + (u.output_tokens || 0),
+              total_tokens: (totalUsage.value.total_tokens || 0) + (u.total_tokens || 0),
+              calls: (totalUsage.value.calls || 0) + 1,
+            }
           }
+          if (data.run_id) lastRunId.value = data.run_id
           persist()
         } else if (method === 'tool_start') {
           messages.value.push({
@@ -231,6 +241,20 @@ export function useChat(cvId: Ref<number>) {
             isStreaming.value = true
           } else if (evt === 'completed' || evt === 'failed' || evt === 'cancelled') {
             isStreaming.value = false
+            if (evt === 'completed' && data.run_id && data.run_id !== lastRunId.value) {
+              const t = data.total_usage as
+                | { input_tokens?: number; output_tokens?: number; total_tokens?: number; calls?: number }
+                | undefined
+              if (t) {
+                totalUsage.value = {
+                  input_tokens: (totalUsage.value.input_tokens || 0) + (t.input_tokens || 0),
+                  output_tokens: (totalUsage.value.output_tokens || 0) + (t.output_tokens || 0),
+                  total_tokens: (totalUsage.value.total_tokens || 0) + (t.total_tokens || 0),
+                  calls: (totalUsage.value.calls || 0) + (t.calls || 0),
+                }
+                lastRunId.value = data.run_id
+              }
+            }
             persist()
           }
         }
@@ -281,12 +305,7 @@ export function useChat(cvId: Ref<number>) {
     }
 
     try {
-      const fullMessages = [
-        ...messages.value
-          .filter((m) => m.type !== 'tool')
-          .map((m) => ({ type: m.type, content: m.content })),
-        { type: 'human' as const, content },
-      ]
+      const fullMessages = [{ type: 'human' as const, content }]
 
       messages.value.push({ type: 'human', content })
       persistNow()
@@ -341,6 +360,7 @@ export function useChat(cvId: Ref<number>) {
   }
 
   function clearChat() {
+    const tid = threadId.value
     shouldReconnect = false
     streamActive = false
     teardown()
@@ -349,8 +369,16 @@ export function useChat(cvId: Ref<number>) {
     clearPersisted()
     messages.value = []
     totalUsage.value = {}
+    lastRunId.value = null
     lastSeq.value = 0
     msgIndex.clear()
+
+    if (tid) {
+      fetch(`${API_URL}/threads/${tid}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token()}` },
+      }).catch(() => {})
+    }
   }
 
   async function loadHistory() {
@@ -359,6 +387,22 @@ export function useChat(cvId: Ref<number>) {
       threadId.value = stored
       loadPersisted()
       initStream()
+
+      try {
+        const res = await fetch(`${API_URL}/threads/${stored}`, {
+          headers: { Authorization: `Bearer ${token()}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          const serverMessages = (data?.messages || []) as StreamMessage[]
+          if (serverMessages.length > 0) {
+            messages.value = serverMessages
+            persistNow()
+          }
+        }
+      } catch {
+        // keep localStorage cache on network error
+      }
     }
   }
 
