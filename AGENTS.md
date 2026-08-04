@@ -143,7 +143,7 @@ api.delete<T>('/path')
 
 ### ToolCallBubble
 - Props: `name`, `status`
-- Memory tools (`get_memory`, `save_fact`, `delete_fact`) ditandai ikon `Brain`
+- Memory tools (`list_categories`, `get_memory`, `save_fact`, `delete_fact`) ditandai ikon `Brain`
 
 ## Editor Flow (EditorView)
 

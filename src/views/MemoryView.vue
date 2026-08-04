@@ -5,7 +5,7 @@ import NavBar from '@/components/NavBar.vue'
 import { PhPlus, PhTrash, PhPencilSimple } from '@phosphor-icons/vue'
 import type { MemoryFact, MemoryList } from '@/types'
 
-const SUGGESTED_CATEGORIES = ['kontak', 'pengalaman', 'pendidikan', 'skill', 'bahasa', 'target', 'preferensi']
+const SUGGESTED_CATEGORIES = ['contact', 'experience', 'education', 'skill', 'language', 'target', 'preference']
 
 const facts = ref<MemoryFact[]>([])
 const loading = ref(true)
@@ -43,7 +43,7 @@ async function fetchCategories() {
 const groupedFacts = computed<FactGroup[]>(() => {
   const groups = new Map<string, MemoryFact[]>()
   for (const fact of facts.value) {
-    const cat = fact.category.trim() || 'lainnya'
+    const cat = fact.category.trim() || 'other'
     const list = groups.get(cat) ?? []
     list.push(fact)
     groups.set(cat, list)
@@ -170,7 +170,7 @@ onMounted(() => {
               <input
                 v-model="newCategory"
                 list="category-suggestions"
-                placeholder="CATEGORY (bebas)..."
+                placeholder="CATEGORY (free-form)..."
                 class="bg-surface border border-border px-3 py-2.5 text-xs font-mono tracking-widest text-text placeholder:text-text-tertiary focus:border-primary focus:outline-none"
               />
               <datalist id="category-suggestions">
@@ -205,9 +205,9 @@ onMounted(() => {
             [ HOW IT WORKS ]
           </div>
           <div class="text-xs font-mono tracking-widest text-text-secondary leading-5">
-            <p>Fakta disimpan otomatis oleh agent saat kamu berbagi info personal di chat.</p>
-            <p class="mt-2">Berlaku untuk semua CV — kontak, pengalaman, skill, target role, preferensi.</p>
-            <p class="mt-2 text-text-tertiary">Edit atau hapus manual di sini — koreksi kamu berlaku (last-write-wins).</p>
+            <p>Facts are saved automatically by the agent when you share personal info in chat.</p>
+            <p class="mt-2">Applies to all CVs — contact, experience, skills, target role, preferences.</p>
+            <p class="mt-2 text-text-tertiary">Edit or delete manually here — your corrections take effect (last-write-wins).</p>
           </div>
         </div>
       </div>
@@ -230,7 +230,7 @@ onMounted(() => {
           </div>
           <h2 class="text-2xl font-black text-text mb-2">MEMORY EMPTY</h2>
           <p class="text-xs font-mono tracking-widest text-text-secondary normal-case">
-            Ceritakan dirimu ke agent di chat — fakta akan tersimpan otomatis.
+            Tell the agent about yourself in chat — facts will be saved automatically.
           </p>
         </div>
 
