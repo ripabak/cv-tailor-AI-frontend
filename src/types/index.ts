@@ -67,6 +67,17 @@ export interface ToolCallDisplay {
   error?: string
 }
 
+export interface MemoryFact {
+  key: string
+  category: string
+  content: string
+  updated_at: string
+}
+
+export interface MemoryList {
+  facts: MemoryFact[]
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'tool'
   content: string | null

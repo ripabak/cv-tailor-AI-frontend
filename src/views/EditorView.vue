@@ -98,6 +98,41 @@ const generatedHtml = ref('')
 const loading = ref(true)
 const error = ref('')
 
+const editMode = ref(false)
+const savingHtml = ref(false)
+
+function enterEditMode() {
+  editMode.value = true
+  if (!isDesktop.value) mobileTab.value = 'preview'
+}
+
+async function saveEditedHtml() {
+  const preview = previewRef.value
+  const html = preview?.getHTML?.()
+  if (!html) return
+  if (html.trim() === generatedHtml.value.trim()) {
+    editMode.value = false
+    return
+  }
+  savingHtml.value = true
+  try {
+    const updated = await api.post<CV>(`/cv/${cvId.value}/html`, { html })
+    cv.value = updated
+    generatedHtml.value = updated.latest_html || html
+    await loadVersions()
+    editMode.value = false
+  } catch {
+    // keep edit mode on error so the user can retry
+  } finally {
+    savingHtml.value = false
+  }
+}
+
+function cancelEdit() {
+  editMode.value = false
+  if (cv.value?.latest_html) generatedHtml.value = cv.value.latest_html
+}
+
 const editingTitle = ref(false)
 const titleInput = ref<HTMLInputElement | null>(null)
 const titleDraft = ref('')
@@ -170,12 +205,12 @@ let lastMessagesLength = 0
 watch(() => messages.value.length, (len) => {
   if (len > lastMessagesLength) {
     lastMessagesLength = len
-    loadCVSilent()
+    if (!editMode.value) loadCVSilent()
   }
 })
 
 watch(isStreaming, (streaming) => {
-  if (!streaming) loadCVSilent()
+  if (!streaming && !editMode.value) loadCVSilent()
 })
 
 async function loadVersions() {
@@ -353,7 +388,7 @@ function openShare() {
         <div class="flex items-center gap-1 sm:gap-1.5 border-r border-border pr-2 sm:pr-3">
           <button
             @click="handleUndo"
-            :disabled="!canUndo"
+            :disabled="!canUndo || editMode"
             class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-text-secondary border border-border hover:bg-surface hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             title="Undo"
           >
@@ -361,7 +396,7 @@ function openShare() {
           </button>
           <button
             @click="handleRedo"
-            :disabled="!canRedo"
+            :disabled="!canRedo || editMode"
             class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-text-secondary border border-border hover:bg-surface hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             title="Redo"
           >
@@ -369,10 +404,40 @@ function openShare() {
           </button>
         </div>
 
+        <div class="flex items-center gap-1 sm:gap-1.5 border-r border-border pr-2 sm:pr-3">
+          <button
+            v-if="!editMode"
+            @click="enterEditMode"
+            class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-primary border border-primary bg-primary-light hover:bg-surface transition-colors"
+            title="Edit CV content directly"
+          >
+            [ EDIT ]
+          </button>
+          <template v-else>
+            <button
+              @click="saveEditedHtml"
+              :disabled="savingHtml"
+              class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-success bg-success-bg border border-success hover:bg-success-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Save edits (Cmd/Ctrl+S)"
+            >
+              <span class="cv-blink inline-block w-1.5 h-1.5 bg-success mr-1.5 align-middle" />
+              {{ savingHtml ? 'SAVING...' : '[ SAVE ]' }}
+            </button>
+            <button
+              @click="cancelEdit"
+              class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-text-secondary border border-border hover:bg-surface hover:text-text transition-colors"
+              title="Discard edits"
+            >
+              [ CANCEL ]
+            </button>
+          </template>
+        </div>
+
         <div class="flex items-center gap-1 sm:gap-1.5">
           <button
             @click="handlePrint"
-            class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-text-secondary border border-border hover:bg-surface hover:text-text transition-colors"
+            :disabled="editMode"
+            class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-text-secondary border border-border hover:bg-surface hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             title="Download PDF"
           >
             [ PDF ]
@@ -381,7 +446,8 @@ function openShare() {
           <button
             v-if="cv?.is_published"
             @click="openShare"
-            class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-primary border border-primary bg-primary-light hover:bg-surface transition-colors"
+            :disabled="editMode"
+            class="px-2.5 py-1.5 text-[10px] font-mono tracking-widest text-primary border border-primary bg-primary-light hover:bg-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             title="Share link"
           >
             [ SHARE ]
@@ -389,8 +455,8 @@ function openShare() {
 
           <button
             @click="togglePublish"
-            :disabled="publishing"
-            class="px-3 py-1.5 text-[10px] font-mono tracking-widest transition-colors"
+            :disabled="publishing || editMode"
+            class="px-3 py-1.5 text-[10px] font-mono tracking-widest transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             :class="cv?.is_published
               ? 'text-success bg-success-bg border border-success hover:bg-success-bg'
               : 'bg-primary text-primary-on border border-primary hover:bg-primary-hover'"
@@ -406,7 +472,7 @@ function openShare() {
     <VersionTimeline :versions="activeVersions" :current-index="0" />
 
     <!-- Mobile tab selector -->
-    <div class="lg:hidden flex border-b border-border bg-surface-secondary">
+    <div v-if="!editMode" class="lg:hidden flex border-b border-border bg-surface-secondary">
       <button
         @click="mobileTab = 'chat'"
         class="flex-1 py-2.5 text-[10px] font-mono tracking-widest border-r border-border transition-colors"
@@ -436,6 +502,7 @@ function openShare() {
           :messages="messages"
           :is-streaming="isStreaming"
           :total-usage="totalUsage"
+          :disabled="editMode"
           @send="handleSend"
           @clear="clear"
           @stop="stop"
@@ -458,8 +525,8 @@ function openShare() {
         :class="mobileTab === 'preview' ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'"
       >
         <div class="flex-1 min-h-0 bg-surface">
-          <CVPreviewIframe v-if="isDesktop" ref="previewRef" :html="generatedHtml" />
-          <MobileCVPreview v-else ref="previewRef" :html="generatedHtml" />
+          <CVPreviewIframe v-if="isDesktop" ref="previewRef" :html="generatedHtml" :editable="editMode" @save="saveEditedHtml" />
+          <MobileCVPreview v-else ref="previewRef" :html="generatedHtml" :editable="editMode" @save="saveEditedHtml" />
         </div>
       </div>
 

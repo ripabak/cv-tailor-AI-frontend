@@ -1,8 +1,12 @@
 <script setup lang="ts">
-defineProps<{
+import { PhBrain } from '@phosphor-icons/vue'
+
+const props = defineProps<{
   name: string
   status: 'running' | 'done' | 'error'
 }>()
+
+const isMemoryTool = ['get_memory', 'save_fact', 'delete_fact'].includes(props.name)
 </script>
 
 <template>
@@ -27,6 +31,7 @@ defineProps<{
         <line x1="15" y1="9" x2="9" y2="15" />
         <line x1="9" y1="9" x2="15" y2="15" />
       </svg>
+      <PhBrain v-if="isMemoryTool" class="w-3.5 h-3.5" weight="fill" />
       <span>{{ name }}</span>
     </div>
   </div>

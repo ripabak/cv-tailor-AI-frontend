@@ -13,6 +13,7 @@ const props = defineProps<{
   messages: StreamMessage[]
   isStreaming: boolean
   totalUsage: { input_tokens?: number; output_tokens?: number; total_tokens?: number; calls?: number }
+  disabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -154,7 +155,7 @@ function statusClasses(status?: string) {
 
       <template #input>
         <ChatInput
-          :disabled="isStreaming"
+          :disabled="isStreaming || props.disabled"
           @submit="handleSend"
           @stop="emit('stop')"
         />

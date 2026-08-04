@@ -49,6 +49,25 @@ body::after {
   mix-blend-mode: overlay;
 }
 
+/* Edit mode indicators */
+@keyframes cv-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes cv-edit-pulse {
+  0%, 100% { border-color: var(--color-primary); }
+  50% { border-color: var(--color-primary-light); }
+}
+
+.cv-blink {
+  animation: cv-blink 1s steps(1) infinite;
+}
+
+.cv-edit-pulse {
+  animation: cv-edit-pulse 1.2s ease-in-out infinite;
+}
+
 /* Focus visible */
 :focus-visible {
   outline: 2px solid var(--color-primary);

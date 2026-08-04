@@ -51,6 +51,7 @@ frontend/src/
 │   ├── DashboardView.vue       # /dashboard — list user's CVs
 │   ├── TemplatesView.vue       # /templates — gallery of templates
 │   ├── EditorView.vue          # /editor/:cvId — split chat + preview
+│   ├── MemoryView.vue          # /memory — kelola long-term memory agent
 │   └── PublicCVView.vue        # /cv/:slug — public redirect
 ├── components/
 │   ├── NavBar.vue              # Top nav with user info + logout
@@ -80,6 +81,7 @@ frontend/src/
 | `/dashboard` | DashboardView | Yes | List CVs, create new |
 | `/templates` | TemplatesView | Yes | Pick template → create CV |
 | `/editor/:cvId` | EditorView | Yes | Chat + iframe preview + versions |
+| `/memory` | MemoryView | Yes | Kelola long-term memory (user + per-CV facts) |
 | `/cv/:slug` | PublicCVView | No | Redirect to public bare CV |
 
 **Guard:** Router beforeEach checks localStorage `token`. If missing and route requires auth → redirect `/login`. If token exists and on login/register → redirect `/dashboard`.
@@ -118,7 +120,7 @@ api.delete<T>('/path')
 - Props: `html: string`
 - Renders via `<iframe :srcdoc="html" sandbox="..." />`
 - Empty state when no HTML
-- Exposes `print()`, `saveScroll()`, `restoreScroll()`
+- Exposes `print()`, `saveScroll()`, `restoreScroll()`, `getHTML()`, `iframeRef`; `editable` prop toggles contentEditable + emits `save` on Cmd/Ctrl+S
 
 ### CVPreviewCard
 - Props: `title`, `html`, `subtitle`, `loading`
@@ -138,6 +140,10 @@ api.delete<T>('/path')
 - Props: `visible`, `url`
 - Emits: `close`
 - Copy-to-clipboard with feedback
+
+### ToolCallBubble
+- Props: `name`, `status`
+- Memory tools (`get_memory`, `save_fact`, `delete_fact`) ditandai ikon `Brain`
 
 ## Editor Flow (EditorView)
 
@@ -165,5 +171,5 @@ api.delete<T>('/path')
 - Use `<script setup lang="ts">` — no Options API
 - Path alias `@/` maps to `src/`
 - No Pinia — auth state managed via composable (sufficient for MVP scope)
-- No manual HTML editing — 100% AI-driven by design
+- Primary editing flow is AI-driven via chat; optional direct edit mode (contentEditable in iframe) saves via `POST /api/cv/:cvId/html` as a new version
 - Chat history is UI-only — not persisted

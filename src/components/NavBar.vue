@@ -43,6 +43,13 @@ function handleLogout() {
           >
             [ TEMPLATES ]
           </router-link>
+          <router-link
+            to="/memory"
+            class="px-4 py-2 text-xs font-mono tracking-widest text-text-secondary border-r border-border hover:bg-surface-secondary hover:text-text transition-colors"
+            active-class="bg-surface-secondary text-text"
+          >
+            [ MEMORY ]
+          </router-link>
         </div>
       </div>
 
@@ -87,6 +94,13 @@ function handleLogout() {
         @click="menuOpen = false"
       >
         [ TEMPLATES ]
+      </router-link>
+      <router-link
+        to="/memory"
+        class="px-4 py-3 text-xs font-mono tracking-widest text-text-secondary border-b border-border hover:bg-surface hover:text-text"
+        @click="menuOpen = false"
+      >
+        [ MEMORY ]
       </router-link>
       <div class="px-4 py-3 text-xs font-mono tracking-widest text-text-tertiary border-b border-border">
         {{ user?.display_name }}
