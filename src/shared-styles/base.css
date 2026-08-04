@@ -43,8 +43,8 @@ body::after {
     0deg,
     transparent,
     transparent 2px,
-    rgb(255 255 255 / 0.04) 2px,
-    rgb(255 255 255 / 0.04) 4px
+    var(--color-scanline) 2px,
+    var(--color-scanline) 4px
   );
   mix-blend-mode: overlay;
 }

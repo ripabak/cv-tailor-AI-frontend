@@ -13,7 +13,7 @@
 
 - **Archetype:** Industrial Brutalism / Tactical Telemetry — dark CRT terminal, single hazard-red accent.
 - **Palette:** near-black surface (`#0A0A0A`), off-white text (`#EAEAEA`), red accent (`#E61919`), terminal green (`#4AF626`) reserved for one status use.
-- **Mode:** dark-only; `html` always has `class="dark"`.
+- **Mode:** dual-mode (light default + dark via `.dark` class on `<html>`). Theme from `useTheme` composable (`cv-theme` in localStorage, default light). Anti-FOUC script in `index.html`.
 - **Tokens:** defined in `src/shared-styles/tokens.css` and used as Tailwind utilities (`bg-surface`, `text-text`, `border-border`, etc.).
 - **Radius:** zero — all corners are 90°.
 - **Shadows:** none.

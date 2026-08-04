@@ -6,33 +6,35 @@
     "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
     "Liberation Mono", monospace;
 
-  --color-primary: #e61919;
-  --color-primary-hover: #ff2a2a;
-  --color-primary-light: #2a0a0a;
-  --color-primary-dark: #ff6666;
-  --color-primary-on: #0a0a0a;
+  --color-primary: #c71414;
+  --color-primary-hover: #a31010;
+  --color-primary-light: #fbe9e9;
+  --color-primary-dark: #e61919;
+  --color-primary-on: #ffffff;
 
-  --color-surface: #0a0a0a;
-  --color-surface-secondary: #111111;
-  --color-surface-tertiary: #141414;
-  --color-surface-elevated: #111111;
+  --color-surface: #f4f4f2;
+  --color-surface-secondary: #ececea;
+  --color-surface-tertiary: #e4e4e1;
+  --color-surface-elevated: #fafaf8;
 
-  --color-border: #2a2a2a;
-  --color-border-hover: #444444;
-  --color-border-strong: #666666;
+  --color-border: #d8d8d4;
+  --color-border-hover: #babab4;
+  --color-border-strong: #8e8e88;
 
-  --color-text: #eaeaea;
-  --color-text-secondary: #999999;
-  --color-text-tertiary: #666666;
+  --color-text: #161616;
+  --color-text-secondary: #52524c;
+  --color-text-tertiary: #6c6c66;
 
-  --color-success: #4af626;
-  --color-success-bg: #0a1a05;
-  --color-success-text: #4af626;
-  --color-warning: #ff9900;
-  --color-warning-bg: #1a1200;
-  --color-error: #e61919;
-  --color-error-bg: #1a0505;
-  --color-error-text: #ff6666;
+  --color-success: #146b07;
+  --color-success-bg: #e8f5e2;
+  --color-success-text: #146b07;
+  --color-warning: #8f5300;
+  --color-warning-bg: #fbf0dc;
+  --color-error: #c71414;
+  --color-error-bg: #fbe9e9;
+  --color-error-text: #c71414;
+
+  --color-scanline: rgb(0 0 0 / 0.03);
 
   --color-shadow: 0 0 0;
 
@@ -76,6 +78,8 @@
   --color-error: #e61919;
   --color-error-bg: #1a0505;
   --color-error-text: #ff6666;
+
+  --color-scanline: rgb(255 255 255 / 0.04);
 
   --color-shadow: 0 0 0;
 }

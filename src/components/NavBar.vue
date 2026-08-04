@@ -2,10 +2,12 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import { useTheme } from '@/composables/useTheme'
 import { PhList, PhX } from '@phosphor-icons/vue'
 
 const router = useRouter()
 const { user, isAuthenticated, logout } = useAuth()
+const { theme, toggleTheme } = useTheme()
 const menuOpen = ref(false)
 
 function handleLogout() {
@@ -58,6 +60,13 @@ function handleLogout() {
           {{ user?.display_name }}
         </span>
         <button
+          @click="toggleTheme"
+          class="hidden md:block px-3 py-1.5 text-xs font-mono tracking-widest text-text-secondary border border-border hover:border-primary hover:text-primary transition-colors"
+          :title="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+        >
+          [ {{ theme === 'dark' ? 'LIGHT' : 'DARK' }} ]
+        </button>
+        <button
           @click="handleLogout"
           class="hidden md:block px-3 py-1.5 text-xs font-mono tracking-widest text-text-secondary border border-border hover:border-primary hover:text-primary transition-colors"
         >
@@ -105,6 +114,12 @@ function handleLogout() {
       <div class="px-4 py-3 text-xs font-mono tracking-widest text-text-tertiary border-b border-border">
         {{ user?.display_name }}
       </div>
+      <button
+        @click="toggleTheme"
+        class="w-full px-4 py-3 text-left text-xs font-mono tracking-widest text-text-secondary border-b border-border hover:bg-surface hover:text-text"
+      >
+        [ {{ theme === 'dark' ? 'LIGHT' : 'DARK' }} MODE ]
+      </button>
       <button
         @click="handleLogout"
         class="px-4 py-3 text-left text-xs font-mono tracking-widest text-primary hover:bg-primary-light transition-colors"

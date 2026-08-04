@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useTheme } from '@/composables/useTheme'
 
 const router = useRouter()
+const { theme, toggleTheme } = useTheme()
 
 function goToRegister() {
   router.push('/register')
@@ -46,6 +48,13 @@ const steps = [
           CV TAILOR<span class="text-text-tertiary">™</span>
         </router-link>
         <div class="flex items-center gap-2">
+          <button
+            @click="toggleTheme"
+            class="px-3 py-1.5 text-xs font-mono tracking-widest text-text-secondary border border-border hover:bg-surface-secondary hover:text-text transition-colors"
+            :title="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+          >
+            [ {{ theme === 'dark' ? 'LIGHT' : 'DARK' }} ]
+          </button>
           <button
             @click="goToLogin"
             class="px-3 py-1.5 text-xs font-mono tracking-widest text-text-secondary border border-border hover:bg-surface-secondary hover:text-text transition-colors"
